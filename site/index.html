@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Professor Layton Puzzles (Scraped Index)</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap">
+      <h1>Layton Puzzle Index</h1>
+      <p class="sub">
+        Search, open a puzzle, then expand hints/solution/progress.
+      </p>
+
+      <div class="controls">
+        <input id="q" type="search" placeholder="Search by #, title, US/UK… e.g. 63, village, picarats" />
+        <label class="chk">
+          <input id="toggleAllSolutions" type="checkbox" />
+          Auto-open Solutions
+        </label>
+        <label class="chk">
+          <input id="toggleAllHints" type="checkbox" />
+          Auto-open Hints
+        </label>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div id="status" class="status">Loading puzzles…</div>
+    <div id="list" class="list"></div>
+  </main>
+
+  <footer class="wrap footer">
+    <small>
+      Data scraped from the original blog pages. Consider linking back to sources.
+    </small>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
