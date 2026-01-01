@@ -44,9 +44,7 @@ function matchesQuery(p, q) {
     p.title || "",
     p.solution_text || "",
     p.reward_text || "",
-  ]
-    .join(" ")
-    .toLowerCase();
+  ].join(" ").toLowerCase();
   return hay.includes(q);
 }
 
@@ -113,7 +111,6 @@ function renderList(puzzles) {
       section.appendChild(sectionGrid(puzzleImgs));
     }
 
-    // Hints (grouped)
     const hasHints =
       (p.images?.hint1?.length || 0) +
         (p.images?.hint2?.length || 0) +
@@ -145,7 +142,6 @@ function renderList(puzzles) {
       section.appendChild(hd);
     }
 
-    // Solution
     const solImgs = p.images?.solution || [];
     if (solImgs.length || p.solution_text) {
       const { d: sd, inner } = subDetails("Solution", !!openSol);
@@ -157,11 +153,9 @@ function renderList(puzzles) {
         inner.appendChild(t);
       }
       if (solImgs.length) inner.appendChild(sectionGrid(solImgs));
-
       section.appendChild(sd);
     }
 
-    // Progress / reward
     const progImgs = p.images?.progress || [];
     if (progImgs.length || p.reward_text) {
       const { d: pd, inner } = subDetails("Progress / Reward", false);
@@ -173,7 +167,6 @@ function renderList(puzzles) {
         inner.appendChild(t);
       }
       if (progImgs.length) inner.appendChild(sectionGrid(progImgs));
-
       section.appendChild(pd);
     }
 
@@ -187,7 +180,6 @@ async function main() {
   const status = $("#status");
   status.textContent = "Loading puzzles.json…";
 
-  // Robust base path for GitHub Pages project sites:
   const BASE = new URL(".", window.location.href).href;
   const jsonUrl = BASE + "puzzles.json";
 
@@ -198,7 +190,7 @@ async function main() {
     data = await res.json();
   } catch (e) {
     status.textContent =
-      "Failed to load puzzles.json. Check that puzzles.json exists in the repo root and is deployed by GitHub Pages.";
+      "Failed to load puzzles.json. Ensure puzzles.json is in repo root and GitHub Pages is deploying from root.";
     console.error(e);
     return;
   }
