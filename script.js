@@ -167,7 +167,9 @@ async function main(){
 
   let data;
   try{
-    const res = await fetch("puzzles.json", { cache: "no-store" });
+const BASE = new URL(".", window.location.href).href;
+
+const res = await fetch(BASE + "puzzles.json", { cache: "no-store" });
     data = await res.json();
   }catch(e){
     status.textContent = "Failed to load puzzles.json. Are you serving this folder via a local web server?";
