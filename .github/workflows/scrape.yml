@@ -4,6 +4,8 @@ on:
   push:
     branches: [ main ]
   workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * 0" # weekly Sunday 03:00 UTC
 
 permissions:
   contents: write
@@ -11,6 +13,7 @@ permissions:
 jobs:
   scrape:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -20,7 +23,7 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install deps
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install requests beautifulsoup4
@@ -28,14 +31,20 @@ jobs:
       - name: Run scraper
         run: |
           python scrape_blogspot.py
+          echo "==== root files ===="
+          ls -la
+          echo "==== puzzles.json head ===="
+          head -n 30 puzzles.json || true
+          echo "==== debug dir ===="
+          ls -la _debug_html || true
 
       - name: Commit + push if changed
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-          # Add the generated file (and optionally your site files)
-          git add puzzles.json index.html styles.css app.js || true
+          # Commit puzzles.json (and debug folder if created)
+          git add puzzles.json _debug_html || true
 
           git diff --cached --quiet || git commit -m "Auto-update puzzles.json"
           git push
