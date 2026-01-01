@@ -9,21 +9,22 @@ from typing import Dict, List, Optional, Set, Tuple
 import requests
 from bs4 import BeautifulSoup, Tag
 
-# Output in repo root
+# Output (repo root)
 OUT_JSON = Path("puzzles.json")
+
+# Debug folder (repo root). Useful if scraping returns empty.
 DEBUG_DIR = Path("_debug_html")
-DEBUG_DIR.mkdir(exist_ok=True)
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (compatible; LaytonScraper/1.1; +github-actions)",
+    "User-Agent": "Mozilla/5.0 (compatible; LaytonScraper/1.2; +github-actions)",
     "Accept-Language": "en-US,en;q=0.9",
 }
 
 TIMEOUT = 25
-SLEEP_SECONDS = 1.2  # be polite
-MAX_PAGES = 500  # just a safety cap
+SLEEP_SECONDS = 1.2  # polite
+MAX_PAGES = 600      # safety cap
 
-# Seed pages to discover puzzle links from:
+# Start discovery from these pages (sidebar + navigation links usually include puzzle pages)
 SEEDS = [
     "https://professorlaytonwalkthrough.blogspot.com/2008/02/puzzle001.html",
     "https://professorlaytonwalkthrough.blogspot.com/",
@@ -72,7 +73,7 @@ def detect_section(text: str) -> Optional[str]:
 
 
 def find_post_container(soup: BeautifulSoup) -> Tag:
-    # Try common Blogger containers
+    # Blogger templates vary. Try common containers first.
     selectors = [
         "div.post-body.entry-content",
         "div.post-body",
@@ -90,7 +91,7 @@ def find_post_container(soup: BeautifulSoup) -> Tag:
 
 
 def extract_title(soup: BeautifulSoup) -> str:
-    # Prefer header-like titles first
+    # Prefer visible headings
     for tag in ["h3", "h2", "h1"]:
         h = soup.find(tag)
         if h:
@@ -104,8 +105,8 @@ def extract_title(soup: BeautifulSoup) -> str:
     return "Untitled"
 
 
-def extract_puzzle_id_from_title_or_url(title: str, url: str) -> Optional[int]:
-    # Title usually starts with "001 ..."
+def extract_puzzle_id(title: str, url: str) -> Optional[int]:
+    # Title usually includes "001 ..." etc
     m = re.search(r"\b(\d{3})\b", title)
     if m:
         return int(m.group(1))
@@ -115,9 +116,9 @@ def extract_puzzle_id_from_title_or_url(title: str, url: str) -> Optional[int]:
     return None
 
 
-def save_debug(name: str, html: str):
-    p = DEBUG_DIR / name
-    p.write_text(html, encoding="utf-8")
+def save_debug(name: str, content: str):
+    DEBUG_DIR.mkdir(exist_ok=True)
+    (DEBUG_DIR / name).write_text(content, encoding="utf-8")
 
 
 def fetch(session: requests.Session, url: str) -> Tuple[int, str]:
@@ -127,7 +128,7 @@ def fetch(session: requests.Session, url: str) -> Tuple[int, str]:
 
 def discover_puzzle_urls(session: requests.Session) -> List[str]:
     """
-    Find all links matching .../puzzleNNN.html from seed pages.
+    Discover all /puzzleNNN.html URLs from seed pages (sidebar and navigation).
     """
     found: Set[str] = set()
 
@@ -135,7 +136,10 @@ def discover_puzzle_urls(session: requests.Session) -> List[str]:
         code, html = fetch(session, seed)
         print(f"[seed] {seed} -> {code}")
         if code != 200 or not html:
-            save_debug(f"seed_fail_{re.sub(r'[^a-zA-Z0-9]+','_',seed)[:60]}.html", html or f"STATUS={code}")
+            save_debug(
+                f"seed_fail_{re.sub(r'[^a-zA-Z0-9]+','_',seed)[:60]}.html",
+                html or f"STATUS={code}",
+            )
             continue
 
         soup = BeautifulSoup(html, "html.parser")
@@ -156,14 +160,16 @@ def scrape_one(session: requests.Session, url: str) -> Optional[Puzzle]:
     print(f"[get] {url} -> {code}")
 
     if code != 200 or not html:
-        save_debug(f"page_fail_{re.sub(r'[^0-9]', '', url)[-3:] or 'unknown'}.html", html or f"STATUS={code}")
+        # Save what we got for inspection
+        suffix = re.search(r"puzzle(\d{3})\.html", url)
+        tag = suffix.group(1) if suffix else "unknown"
+        save_debug(f"page_fail_{tag}.html", html or f"STATUS={code}")
         return None
 
     soup = BeautifulSoup(html, "html.parser")
     title = extract_title(soup)
-    pid = extract_puzzle_id_from_title_or_url(title, url)
+    pid = extract_puzzle_id(title, url)
     if pid is None:
-        # Save for inspection
         save_debug("no_pid.html", html)
         return None
 
@@ -171,6 +177,7 @@ def scrape_one(session: requests.Session, url: str) -> Optional[Puzzle]:
 
     images: Dict[str, List[str]] = {k: [] for k in SECTION_KEYS}
     current_section: Optional[str] = None
+
     in_solution = False
     in_progress = False
     solution_text = ""
@@ -186,13 +193,13 @@ def scrape_one(session: requests.Session, url: str) -> Optional[Puzzle]:
                 in_progress = (sec == "progress")
                 continue
 
-            # Capture the first meaningful line after Solution / Progress labels
+            # Capture first meaningful line after Solution/Progress label
             if in_solution and not solution_text and txt and txt.lower() != "solution":
-                if len(txt) <= 220 and not txt.lower().startswith("hint"):
+                if len(txt) <= 240 and not txt.lower().startswith("hint"):
                     solution_text = txt
 
             if in_progress and not reward_text and txt and txt.lower() != "progress":
-                if len(txt) <= 260 and any(k in txt.lower() for k in ["picar", "hint", "coin"]):
+                if len(txt) <= 280 and any(k in txt.lower() for k in ["picar", "hint", "coin"]):
                     reward_text = txt
 
         if el.name == "img":
@@ -204,7 +211,6 @@ def scrape_one(session: requests.Session, url: str) -> Optional[Puzzle]:
             if src not in images[current_section]:
                 images[current_section].append(src)
 
-    # If we somehow got zero images, save the HTML to debug selector issues
     img_count = sum(len(v) for v in images.values())
     if img_count == 0:
         save_debug(f"no_images_{pid:03d}.html", html)
@@ -223,29 +229,40 @@ def main():
     with requests.Session() as session:
         urls = discover_puzzle_urls(session)
 
-        # Fallback: if discovery fails, try sequential as a backup
+        # Fallback if discovery fails for any reason
         if not urls:
             print("No puzzle links discovered from seeds. Falling back to sequential 001..200")
-            urls = [f"https://professorlaytonwalkthrough.blogspot.com/2008/02/puzzle{n:03d}.html" for n in range(1, 201)]
+            urls = [
+                f"https://professorlaytonwalkthrough.blogspot.com/2008/02/puzzle{n:03d}.html"
+                for n in range(1, 201)
+            ]
 
         puzzles: List[Puzzle] = []
-        for i, url in enumerate(urls, 1):
+        for url in urls:
             p = scrape_one(session, url)
             if p:
                 puzzles.append(p)
                 print(f"  + OK #{p.id:03d} imgs={sum(len(v) for v in p.images.values())}")
             time.sleep(SLEEP_SECONDS)
 
+    puzzles_sorted = sorted(puzzles, key=lambda x: x.id)
+
     payload = {
         "source": "professorlaytonwalkthrough.blogspot.com",
         "generated_at_unix": int(time.time()),
-        "count": len(puzzles),
-        "puzzles": [asdict(p) for p in sorted(puzzles, key=lambda x: x.id)],
+        "count": len(puzzles_sorted),
+        "puzzles": [asdict(p) for p in puzzles_sorted],
     }
 
     print("Writing:", OUT_JSON.resolve())
     OUT_JSON.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
-    print(f"Wrote {len(puzzles)} puzzles to {OUT_JSON}")
+    print(f"Wrote {len(puzzles_sorted)} puzzles to {OUT_JSON}")
+
+    # Helpful output for Actions logs
+    if len(puzzles_sorted) == 0:
+        print("WARNING: 0 puzzles scraped. Check _debug_html/ for saved pages.")
+    else:
+        print("Sample:", puzzles_sorted[0].title)
 
 
 if __name__ == "__main__":
