@@ -4,8 +4,6 @@ on:
   push:
     branches: [ main ]
   workflow_dispatch:
-  schedule:
-    - cron: "0 3 * * 0"   # weekly, Sunday 03:00 UTC
 
 permissions:
   contents: write
@@ -15,29 +13,24 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
           pip install requests beautifulsoup4
 
       - name: Run scraper
         run: |
           python scrape_blogspot.py
 
-      - name: Commit updated puzzles.json
+      - name: Commit results
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           git add site/ || true
           git diff --cached --quiet || git commit -m "Auto-update puzzles.json"
-
-      - name: Push changes
-        run: git push
+          git push
