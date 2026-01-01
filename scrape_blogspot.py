@@ -1,9 +1,10 @@
-cd Layton-Puzzles
-python -m venv .venv
-# Windows:
-.venv\Scripts\activate
-# macOS/Linux:
-# source .venv/bin/activate
+#!/usr/bin/env python3
+import json
+import re
+import time
+from dataclasses import dataclass, asdict
+from pathlib import Path
+from typing import Dict, List, Optional
 
-pip install requests beautifulsoup4
-python scrape_blogspot.py
+import requests
+from bs4 import BeautifulSoup, Tag
