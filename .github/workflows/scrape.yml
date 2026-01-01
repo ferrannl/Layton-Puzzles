@@ -35,7 +35,7 @@ jobs:
           git config user.email "github-actions@github.com"
 
           # Add the generated file (and optionally your site files)
-          git add puzzles.json index.html styles.css app.js || true
+          git add puzzles.json index.html style.css script.js || true
 
           git diff --cached --quiet || git commit -m "Auto-update puzzles.json"
           git push
