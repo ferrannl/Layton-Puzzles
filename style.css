@@ -1,11 +1,20 @@
 :root{
-  --bg:#0b0d12;
-  --panel:#111625;
-  --panel2:#0f1320;
-  --text:#e8ecff;
-  --muted:#a8b0d6;
-  --line:rgba(255,255,255,.08);
-  --accent:#6aa9ff;
+  --bg:#0e0a06;
+  --panel:#1a120b;
+  --panel2:#14100c;
+  --text:#fff8ef;
+  --muted:#d7c6b6;
+  --line:rgba(255,255,255,.10);
+
+  /* Layton palette */
+  --brown:#52402e;
+  --orange:#d66a00;
+  --amber:#ea9e44;
+  --red:#b62c00;
+  --tan:#7e4716;
+
+  --accent: var(--orange);
+  --accent2: var(--amber);
 }
 
 *{box-sizing:border-box}
@@ -13,20 +22,24 @@ html,body{height:100%}
 body{
   margin:0;
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji","Segoe UI Emoji";
-  background: radial-gradient(1000px 700px at 20% -10%, rgba(106,169,255,.18), transparent 60%),
-              radial-gradient(900px 600px at 80% 0%, rgba(160,106,255,.12), transparent 60%),
-              var(--bg);
   color:var(--text);
+  background:
+    radial-gradient(900px 600px at 15% -10%, rgba(214,106,0,.18), transparent 60%),
+    radial-gradient(900px 700px at 85% 0%, rgba(234,158,68,.10), transparent 60%),
+    radial-gradient(1200px 900px at 50% 120%, rgba(82,64,46,.25), transparent 60%),
+    var(--bg);
 }
 
 .wrap{max-width:1100px;margin:0 auto;padding:18px}
+
 .topbar{
   border-bottom:1px solid var(--line);
-  background: linear-gradient(180deg, rgba(17,22,37,.9), rgba(17,22,37,.55));
+  background: linear-gradient(180deg, rgba(26,18,11,.95), rgba(26,18,11,.55));
   position:sticky;top:0;backdrop-filter: blur(10px);
   z-index:20;
 }
-h1{margin:6px 0 2px;font-size:22px}
+
+h1{margin:6px 0 2px;font-size:22px;letter-spacing:.02em}
 .sub{margin:0 0 12px;color:var(--muted);font-size:14px}
 
 .controls{
@@ -38,21 +51,22 @@ h1{margin:6px 0 2px;font-size:22px}
   padding:10px 12px;
   border-radius:12px;
   border:1px solid var(--line);
-  background: rgba(15,19,32,.8);
+  background: rgba(20,16,12,.75);
   color:var(--text);
   outline:none;
 }
-#q:focus{border-color:rgba(106,169,255,.5)}
+#q:focus{border-color:rgba(214,106,0,.55)}
 .chk{display:flex;gap:8px;align-items:center;color:var(--muted);font-size:13px}
 
 .status{color:var(--muted);padding:12px 0}
 
 .list{display:flex;flex-direction:column;gap:12px;padding-bottom:28px}
 
+/* Puzzle card: NOT too rounded */
 .puzzle{
   border:1px solid var(--line);
-  border-radius:16px;
-  background: linear-gradient(180deg, rgba(17,22,37,.75), rgba(15,19,32,.6));
+  border-radius:6px;
+  background: linear-gradient(180deg, rgba(26,18,11,.78), rgba(20,16,12,.65));
   overflow:hidden;
 }
 .puzzle > summary{
@@ -62,28 +76,29 @@ h1{margin:6px 0 2px;font-size:22px}
   display:flex;align-items:baseline;gap:10px;
 }
 .puzzle > summary::-webkit-details-marker{display:none}
+
 .badge{
   font-variant-numeric: tabular-nums;
   padding:3px 8px;
-  border:1px solid var(--line);
+  border:1px solid rgba(234,158,68,.35);
   border-radius:999px;
   color:var(--muted);
   font-size:12px;
+  background: rgba(234,158,68,.08);
 }
 .title{font-size:15px}
+
 .meta{
   margin-left:auto;
   color:var(--muted);
   font-size:12px;
   display:flex;gap:10px;align-items:center;
 }
-.meta a{color:var(--accent);text-decoration:none}
-.meta a:hover{text-decoration:underline}
 
 .section{
   border-top:1px solid var(--line);
   padding:12px 14px 16px;
-  background: rgba(15,19,32,.4);
+  background: rgba(20,16,12,.40);
 }
 .section h3{
   margin:10px 0 8px;
@@ -93,23 +108,35 @@ h1{margin:6px 0 2px;font-size:22px}
   letter-spacing:.08em;
 }
 
+/* Image grid: consistent thumbs */
 .grid{
   display:grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap:10px;
 }
-img.pimg{
-  width:100%;
-  border-radius:14px;
+.thumb{
   border:1px solid var(--line);
-  background: rgba(255,255,255,.02);
+  background: rgba(255,255,255,.03);
+  padding:8px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+img.pimg{
+  width:251px;
+  height:188px;
+  object-fit:contain; /* no random huge images, no cropping */
+  display:block;
+  background: rgba(0,0,0,.10);
+  border-radius:0; /* keep puzzle imagery sharp */
 }
 
+/* Sub details: still neat but not super rounded */
 .subdetails{
   border:1px solid var(--line);
-  border-radius:14px;
+  border-radius:6px;
   overflow:hidden;
-  background: rgba(17,22,37,.35);
+  background: rgba(26,18,11,.35);
   margin-top:10px;
 }
 .subdetails > summary{
@@ -121,6 +148,23 @@ img.pimg{
 }
 .subdetails > summary::-webkit-details-marker{display:none}
 .subdetails .inner{padding:10px 12px;border-top:1px solid var(--line)}
+
 .textline{color:var(--muted);margin:6px 0 0;font-size:14px}
 
-.footer{color:var(--muted);padding-top:10px;border-top:1px solid var(--line);margin-top:10px}
+/* Locked hints */
+.locked{
+  opacity:.45;
+  pointer-events:none;
+}
+.locked > summary{
+  color:rgba(255,248,239,.7);
+}
+.locked > summary::after{
+  content:" (locked)";
+  color:rgba(234,158,68,.75);
+  font-size:12px;
+  margin-left:6px;
+}
+
+/* Footer removed, but keep class in case */
+.footer{display:none}
