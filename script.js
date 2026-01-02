@@ -2,14 +2,14 @@ const $ = (sel) => document.querySelector(sel);
 
 const PAGE_SIZE = 10;
 
-// NOTE: pagerTop may not exist (you removed it). That's fine.
+// pagerTop is optional; bottom is expected
 const els = {
   q: $("#q"),
   status: $("#status"),
   list: $("#list"),
   toggleAllSolutions: $("#toggleAllSolutions"),
-  pagerTop: $("#pagerTop"),       // can be null
-  pagerBottom: $("#pagerBottom"), // should exist
+  pagerTop: $("#pagerTop"),       // may be null (you removed it)
+  pagerBottom: $("#pagerBottom"), // exists
 };
 
 function pad3(n){ return String(n).padStart(3, "0"); }
@@ -31,7 +31,6 @@ function sanitizeTitle(t, pid) {
   s = s.trim();
   return s || `Puzzle ${pad3(pid)}`;
 }
-
 
 function makeImg(src) {
   const wrap = document.createElement("div");
@@ -171,12 +170,12 @@ function renderList(puzzlesPage, impossibleMap) {
       row.appendChild(h2d);
       row.appendChild(h3d);
       section.appendChild(row);
-      
-  // 👇 ADD THIS
-  section.appendChild(document.createElement("br"));
+
+      // ✅ <br> between hints and solution
+      section.appendChild(document.createElement("br"));
     }
 
-    // SOLUTION
+    // SOLUTION (all images already filtered by scraper)
     const solImgs = p.images?.solution || [];
     if (solImgs.length || p.solution_text) {
       const { d: sd, inner } = subDetails("Solution", !!openSol);
@@ -253,8 +252,26 @@ function mkDots() {
   return d;
 }
 
+function updateProgress(container, page, total) {
+  const trackEl = container.querySelector(".pagerTrack");
+  const pillEl = container.querySelector(".pagerPill");
+  const labelEl = container.querySelector(".pagerLabel");
+  if (!trackEl || !pillEl || !labelEl) return;
+
+  labelEl.textContent = `Page ${page} / ${total} • ${PAGE_SIZE} per page`;
+
+  const frac = total <= 1 ? 0 : (page - 1) / (total - 1);
+
+  // ✅ accurate: pixel translate within track bounds
+  requestAnimationFrame(() => {
+    const trackW = trackEl.clientWidth || 0;
+    const pillW  = pillEl.clientWidth || 0;
+    const maxX = Math.max(0, trackW - pillW);
+    pillEl.style.transform = `translateX(${Math.round(maxX * frac)}px)`;
+  });
+}
+
 function buildPager(container, state) {
-  // ✅ critical: do nothing if pager not present
   if (!container) return;
 
   container.innerHTML = "";
@@ -298,22 +315,16 @@ function buildPager(container, state) {
   row3.className = "pagerProgress";
   row3.innerHTML = `
     <div class="pagerTrack" aria-hidden="true">
-      <div class="pagerPill" id="${container.id}_pill"></div>
+      <div class="pagerPill"></div>
     </div>
-    <div class="pagerLabel" id="${container.id}_label"></div>
+    <div class="pagerLabel"></div>
   `;
 
   container.appendChild(row1);
   container.appendChild(row2);
   container.appendChild(row3);
 
-  const label = $("#" + container.id + "_label");
-  const pill = $("#" + container.id + "_pill");
-
-  label.textContent = `Page ${page} / ${total} • ${PAGE_SIZE} per page`;
-
-  const frac = total <= 1 ? 0 : (page - 1) / (total - 1);
-  pill.style.transform = `translateX(${Math.round(frac * 100)}%)`;
+  updateProgress(container, page, total);
 
   // events
   prev.addEventListener("click", () => {
@@ -345,6 +356,10 @@ function buildPager(container, state) {
       scrollToTop();
     });
   });
+
+  // ✅ if viewport resizes, recompute pill position
+  const onResize = () => updateProgress(container, state.page, state.totalPages);
+  window.addEventListener("resize", onResize, { passive: true });
 }
 
 /* ---------- Main ---------- */
@@ -396,9 +411,8 @@ async function main() {
     els.status.textContent = `Showing ${state.filtered.length} results — ${PAGE_SIZE} per page`;
     renderList(pageItems, impossibleMap);
 
-    // ✅ build whichever exists
-    buildPager(els.pagerTop, state);
-    buildPager(els.pagerBottom, state);
+    buildPager(els.pagerTop, state);     // ok if null
+    buildPager(els.pagerBottom, state);  // bottom always
   };
 
   els.q?.addEventListener("input", () => { state.page = 1; state.renderPage(); });
