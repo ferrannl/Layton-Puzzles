@@ -97,6 +97,18 @@ h1{margin:6px 0 2px;font-size:22px;letter-spacing:.02em}
   display:flex;gap:10px;align-items:center;
 }
 
+/* ✅ Impossible badge */
+.impossible{
+  display:inline-block;
+  padding:3px 8px;
+  border-radius:999px;
+  background: var(--r1);
+  color:#fff;
+  font-weight:700;
+  font-size:12px;
+  border:1px solid rgba(255,255,255,.18);
+}
+
 /* Inner section: flat */
 .section{
   padding:12px 14px 16px;
@@ -168,7 +180,7 @@ img.pimg{
 
 .textline{color:var(--muted);margin:6px 0 0;font-size:14px}
 
-/* Locked hints: simple “disabled” look, no modern effects */
+/* Locked hints: simple “disabled” look */
 .locked{
   opacity:.45;
   pointer-events:none;
