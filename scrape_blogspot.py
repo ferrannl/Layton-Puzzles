@@ -7,18 +7,18 @@ from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
 import requests
-from bs4 import BeautifulSoup, Tag
+from bs4 import BeautifulSoup, Tag, NavigableString
 
 OUT_JSON = Path("puzzles.json")
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (compatible; LaytonScraper/3.2; +github-actions)",
+    "User-Agent": "Mozilla/5.0 (compatible; LaytonScraper/3.4; +github-actions)",
     "Accept-Language": "en-US,en;q=0.9",
 }
 
 TIMEOUT = 30
 SLEEP_SECONDS = 1.1
-MAX_PUZZLES = 30  # adjust anytime (1..100+)
+MAX_PUZZLES = 200  # you can set 20/30 while testing
 
 SEEDS = [
     "https://professorlaytonwalkthrough.blogspot.com/2008/02/puzzle001.html",
@@ -26,6 +26,15 @@ SEEDS = [
 ]
 
 SECTION_KEYS = ["puzzle", "hint1", "hint2", "hint3", "solution"]
+
+# Keywords that indicate a “reward/unlock” caption near an image.
+SKIP_WORDS = [
+    "gizmo",
+    "painting scrap",
+]
+
+GIVE_RE = re.compile(r"\bgive\b.+\bto\b", re.IGNORECASE)
+WHO_RE = re.compile(r"\b(layton|luke)\b", re.IGNORECASE)
 
 @dataclass
 class Puzzle:
@@ -45,7 +54,6 @@ def detect_section(text: str) -> Optional[str]:
     t = clean_text(text).lower()
     if not t:
         return None
-
     if t.startswith("puzzle "):
         return "puzzle"
     if t.startswith("hint 1"):
@@ -126,13 +134,11 @@ def fetch_with_fallback(session: requests.Session, url: str) -> Tuple[int, str, 
 
 def discover_puzzle_urls(session: requests.Session) -> List[str]:
     found: Set[str] = set()
-
     for seed in SEEDS:
         code, html, mode = fetch_with_fallback(session, seed)
         print(f"[seed] {seed} -> {code} ({mode})")
         if code != 200 or not html:
             continue
-
         soup = BeautifulSoup(html, "html.parser")
         for a in soup.find_all("a", href=True):
             href = a["href"]
@@ -140,17 +146,88 @@ def discover_puzzle_urls(session: requests.Session) -> List[str]:
                 continue
             if re.search(r"/puzzle\d{3}\.html$", href):
                 found.add(href)
-
         time.sleep(0.25)
-
     urls = sorted(found)
     print(f"Discovered {len(urls)} puzzle links.")
     return urls
 
+def _sibling_text(node, steps=3) -> str:
+    """Collect nearby sibling text content within a few steps."""
+    out = []
+    cur = node
+    for _ in range(steps):
+        if not cur:
+            break
+        # move to next sibling
+        cur = cur.next_sibling
+        # skip whitespace
+        while isinstance(cur, NavigableString) and not clean_text(str(cur)):
+            cur = cur.next_sibling
+        if isinstance(cur, Tag):
+            out.append(clean_text(cur.get_text(" ", strip=True)))
+        elif isinstance(cur, NavigableString):
+            out.append(clean_text(str(cur)))
+    return clean_text(" ".join(out))
+
+def _prev_sibling_text(node, steps=2) -> str:
+    out = []
+    cur = node
+    for _ in range(steps):
+        if not cur:
+            break
+        cur = cur.previous_sibling
+        while isinstance(cur, NavigableString) and not clean_text(str(cur)):
+            cur = cur.previous_sibling
+        if isinstance(cur, Tag):
+            out.append(clean_text(cur.get_text(" ", strip=True)))
+        elif isinstance(cur, NavigableString):
+            out.append(clean_text(str(cur)))
+    return clean_text(" ".join(out))
+
+def should_skip_solution_image(img: Tag) -> bool:
+    """
+    Skip reward/unlock images that appear in Solution, usually followed by text like:
+    - "Gizmo"
+    - "Painting Scrap"
+    - "Give ... to Layton/Luke ..."
+    Heuristic: look at nearby text around the image (siblings + parent siblings).
+    """
+    # texts near the img
+    nearby = []
+
+    # alt/title can contain keywords sometimes
+    alt = clean_text(img.get("alt") or "")
+    title = clean_text(img.get("title") or "")
+    if alt: nearby.append(alt)
+    if title: nearby.append(title)
+
+    # sibling text after/before
+    nearby.append(_sibling_text(img, steps=4))
+    nearby.append(_prev_sibling_text(img, steps=2))
+
+    # parent-next text (sometimes caption is outside)
+    if img.parent and isinstance(img.parent, Tag):
+        nearby.append(_sibling_text(img.parent, steps=3))
+        nearby.append(_prev_sibling_text(img.parent, steps=1))
+
+    blob = clean_text(" ".join(nearby)).lower()
+    if not blob:
+        return False
+
+    # direct keywords
+    for w in SKIP_WORDS:
+        if w in blob:
+            return True
+
+    # "give ... to ..." + mentions Layton/Luke
+    if GIVE_RE.search(blob) and WHO_RE.search(blob):
+        return True
+
+    return False
+
 def scrape_one(session: requests.Session, url: str) -> Optional[Puzzle]:
     code, html, mode = fetch_with_fallback(session, url)
     print(f"[get] {url} -> {code} ({mode})")
-
     if code != 200 or not html:
         return None
 
@@ -165,7 +242,6 @@ def scrape_one(session: requests.Session, url: str) -> Optional[Puzzle]:
     images: Dict[str, List[str]] = {k: [] for k in SECTION_KEYS}
     current_section: Optional[str] = None
     stop_collecting = False
-
     in_solution = False
     solution_text = ""
 
@@ -197,13 +273,14 @@ def scrape_one(session: requests.Session, url: str) -> Optional[Puzzle]:
             if not is_image_url(src):
                 continue
 
-            # do not collect images until we're inside a useful section
+            # only collect images when we're inside a useful section
             if current_section is None:
                 continue
 
-            # ✅ limit solution images to 2 (prevents the “extra useless third”)
-            if current_section == "solution" and len(images["solution"]) >= 2:
-                continue
+            # ✅ keep ALL solution steps, but skip the “reward/unlock” junk image
+            if current_section == "solution":
+                if should_skip_solution_image(el):
+                    continue
 
             if src not in images[current_section]:
                 images[current_section].append(src)
