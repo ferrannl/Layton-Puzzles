@@ -1,9 +1,10 @@
+
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Crimson+Pro:wght@400;600;700&display=swap');
 
 :root{
   /* Accent gradient (red) */
-  --o1:#b62c00;       /* main red */
-  --o2:#ff5a2a;       /* lighter red for gradient */
+  --o1:#b62c00;
+  --o2:#ff5a2a;
   --r1:#b62c00;
   --t1:#7e4716;
 
@@ -26,6 +27,9 @@
 
   /* Image rounding (slight!) */
   --imgRadius:6px;
+
+  /* Fixed crop amount (CSS pixels). Stable across devices/zoom. */
+  --cropTop: 32px;
 }
 
 /* “Thick black border” for text */
@@ -51,16 +55,16 @@ body{
   color:var(--text);
 }
 
-/* Content wrap */
+/* Content wrap (narrower so desktop has side space) */
 .wrap{
-  max-width:1400px;
+  max-width:1180px;
   margin:0 auto;
   padding:18px;
 }
 
-/* Topbar (NOT sticky anymore) */
+/* Topbar (NOT sticky) */
 .topbar{
-  position:relative; /* was sticky; now scrolls away */
+  position:relative;
   z-index:20;
   background: linear-gradient(180deg, rgba(28,20,14,.98), rgba(28,20,14,.90));
   border-bottom:3px solid var(--o1);
@@ -79,10 +83,7 @@ body{
   letter-spacing:.04em;
   font-size:28px;
   line-height:1.05;
-}
-.brand{ color:#fff; }
-.brand.stroke{
-  /* if you want to add class later */
+  color:#fff;
 }
 
 .sub{
@@ -157,9 +158,12 @@ body{
   font-size:15px;
   font-weight:900;
   color:#fff;
-}
-.title.stroke{
-  /* optional */
+  text-shadow:
+    -1px -1px 0 rgba(0,0,0,.95),
+     1px -1px 0 rgba(0,0,0,.95),
+    -1px  1px 0 rgba(0,0,0,.95),
+     1px  1px 0 rgba(0,0,0,.95),
+     0px  2px 0 rgba(0,0,0,.80);
 }
 
 .meta{
@@ -268,14 +272,10 @@ img.pimg{
   cursor: zoom-in;
 }
 
-/* FIRST puzzle image crop (fixed px, not dependent on zoom) */
-.thumb.hero{
-  /* keeps a stable crop frame */
-}
-.thumb.hero img.pimg{
-  aspect-ratio: 4 / 3;
-  object-fit:cover;
-  transform: translateY(-38px); /* ~20-50px top cut — tweak if you want */
+/* FIXED TOP CROP (stable) */
+.thumb.cropTop img.pimg{
+  /* hide exactly --cropTop px from the top of the rendered image */
+  clip-path: inset(var(--cropTop) 0 0 0);
 }
 
 /* Subdetails */
@@ -308,11 +308,12 @@ img.pimg{
   background: rgba(28,20,14,.72);
 }
 
-/* Hint + Solution header colors */
-.subdetails.hint1 > summary{ background: var(--hint1); color:#1a110a; text-shadow:none; font-weight:900; }
-.subdetails.hint2 > summary{ background: var(--hint2); color:#1a110a; text-shadow:none; font-weight:900; }
-.subdetails.hint3 > summary{ background: var(--hint3); color:#1a110a; text-shadow:none; font-weight:900; }
-.subdetails.solution > summary{ background: var(--solution); color:#ffffff; }
+/* Hint + Solution header colors
+   (User wants white text + fat black border for hints too) */
+.subdetails.hint1 > summary{ background: var(--hint1); color:#fff; }
+.subdetails.hint2 > summary{ background: var(--hint2); color:#fff; }
+.subdetails.hint3 > summary{ background: var(--hint3); color:#fff; }
+.subdetails.solution > summary{ background: var(--solution); color:#fff; }
 
 .textline{
   color:rgba(255,255,255,.92);
@@ -331,7 +332,7 @@ img.pimg{
   display:flex;
   gap:12px;
   align-items:flex-start;
-  flex-wrap:wrap;      /* <-- always allow wrap (fix overflow) */
+  flex-wrap:wrap;
   margin-top:10px;
 }
 .hintsRow .subdetails{
@@ -347,11 +348,6 @@ img.pimg{
 .locked > summary{
   background: rgba(42,26,15,.85) !important;
   color:rgba(255,255,255,.72) !important;
-  text-shadow:
-    -1px -1px 0 rgba(0,0,0,.95),
-     1px -1px 0 rgba(0,0,0,.95),
-    -1px  1px 0 rgba(0,0,0,.95),
-     1px  1px 0 rgba(0,0,0,.95) !important;
 }
 .locked > summary::after{
   content:"  (locked)";
@@ -370,18 +366,17 @@ img.pimg{
   display:flex;
   flex-direction:column;
   gap:10px;
-  align-items:center; /* center everything */
+  align-items:center;
 }
 .pager.bottom{
   box-shadow: 0 -10px 20px rgba(0,0,0,.20);
 }
 
-/* Row 1: Prev / Random / Next */
 .pagerRow{
   display:flex;
   gap:10px;
   align-items:center;
-  justify-content:center; /* centered */
+  justify-content:center;
   flex-wrap:wrap;
 }
 
@@ -420,12 +415,12 @@ img.pimg{
   text-shadow:none !important;
 }
 
-/* Row 2: page index strip */
+/* Row 2 */
 .pagerNums{
   display:flex;
   gap:6px;
   align-items:center;
-  justify-content:center; /* centered */
+  justify-content:center;
   flex-wrap:wrap;
 }
 
@@ -449,7 +444,7 @@ img.pimg{
      1px  1px 0 rgba(0,0,0,.95);
 }
 
-/* Row 3: centered progress track */
+/* Row 3 */
 .pagerProgress{
   display:flex;
   align-items:center;
@@ -460,7 +455,7 @@ img.pimg{
 }
 
 .pagerTrack{
-  flex:0 1 900px;      /* centered fixed max */
+  flex:0 1 900px;
   width:min(900px, 92vw);
   height:10px;
   border-radius:999px;
