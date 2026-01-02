@@ -127,9 +127,6 @@ function renderList(puzzlesPage, impossibleMap) {
     // PUZZLE
     const puzzleImgs = p.images?.puzzle || [];
     if (puzzleImgs.length) {
-      const h = document.createElement("h3");
-      h.textContent = "Puzzle";
-      section.appendChild(h);
       section.appendChild(sectionGrid(puzzleImgs));
     }
 
@@ -140,8 +137,6 @@ function renderList(puzzlesPage, impossibleMap) {
     const hasAnyHints = hint1.length || hint2.length || hint3.length;
 
     if (hasAnyHints) {
-      const rowTitle = document.createElement("h3");
-      rowTitle.textContent = "Hints";
       section.appendChild(rowTitle);
 
       const row = document.createElement("div");
