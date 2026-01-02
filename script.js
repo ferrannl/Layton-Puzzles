@@ -5,12 +5,17 @@ function pad3(n) {
 }
 
 function makeImg(src) {
+  const wrap = document.createElement("div");
+  wrap.className = "thumb";
+
   const img = document.createElement("img");
   img.className = "pimg";
   img.loading = "lazy";
   img.referrerPolicy = "no-referrer";
   img.src = src;
-  return img;
+
+  wrap.appendChild(img);
+  return wrap;
 }
 
 function sectionGrid(urls) {
@@ -43,7 +48,6 @@ function matchesQuery(p, q) {
     `#${pad3(p.id)}`,
     p.title || "",
     p.solution_text || "",
-    p.reward_text || "",
   ].join(" ").toLowerCase();
   return hay.includes(q);
 }
@@ -53,7 +57,7 @@ function renderList(puzzles) {
   list.innerHTML = "";
 
   const openSol = $("#toggleAllSolutions")?.checked;
-  const openHints = $("#toggleAllHints")?.checked;
+  const autoHint1 = $("#toggleAutoHint1")?.checked;
 
   for (const p of puzzles) {
     const d = document.createElement("details");
@@ -76,18 +80,9 @@ function renderList(puzzles) {
       (acc, arr) => acc + (arr?.length || 0),
       0
     );
-
     const count = document.createElement("span");
     count.textContent = `${imgCount} imgs`;
-
-    const a = document.createElement("a");
-    a.href = p.url;
-    a.target = "_blank";
-    a.rel = "noopener noreferrer";
-    a.textContent = "Source";
-
     meta.appendChild(count);
-    meta.appendChild(a);
 
     s.appendChild(badge);
     s.appendChild(title);
@@ -96,13 +91,7 @@ function renderList(puzzles) {
     const section = document.createElement("div");
     section.className = "section";
 
-    if (p.images?.scene?.length) {
-      const h = document.createElement("h3");
-      h.textContent = "Scene";
-      section.appendChild(h);
-      section.appendChild(sectionGrid(p.images.scene));
-    }
-
+    // PUZZLE images
     const puzzleImgs = p.images?.puzzle || [];
     if (puzzleImgs.length) {
       const h = document.createElement("h3");
@@ -111,37 +100,62 @@ function renderList(puzzles) {
       section.appendChild(sectionGrid(puzzleImgs));
     }
 
-    const hasHints =
-      (p.images?.hint1?.length || 0) +
-        (p.images?.hint2?.length || 0) +
-        (p.images?.hint3?.length || 0) >
-      0;
+    // HINTS (sequential unlocking)
+    const hint1 = p.images?.hint1 || [];
+    const hint2 = p.images?.hint2 || [];
+    const hint3 = p.images?.hint3 || [];
 
-    if (hasHints) {
-      const { d: hd, inner } = subDetails("Hints", !!openHints);
-
-      if (p.images?.hint1?.length) {
-        const h = document.createElement("h3");
-        h.textContent = "Hint 1";
-        inner.appendChild(h);
-        inner.appendChild(sectionGrid(p.images.hint1));
-      }
-      if (p.images?.hint2?.length) {
-        const h = document.createElement("h3");
-        h.textContent = "Hint 2";
-        inner.appendChild(h);
-        inner.appendChild(sectionGrid(p.images.hint2));
-      }
-      if (p.images?.hint3?.length) {
-        const h = document.createElement("h3");
-        h.textContent = "Hint 3";
-        inner.appendChild(h);
-        inner.appendChild(sectionGrid(p.images.hint3));
+    const hasAnyHints = hint1.length || hint2.length || hint3.length;
+    if (hasAnyHints) {
+      const { d: h1d, inner: h1i } = subDetails("Hint 1", !!autoHint1);
+      if (hint1.length) h1i.appendChild(sectionGrid(hint1));
+      else {
+        const t = document.createElement("div");
+        t.className = "textline";
+        t.textContent = "(no images)";
+        h1i.appendChild(t);
       }
 
-      section.appendChild(hd);
+      const { d: h2d, inner: h2i } = subDetails("Hint 2", false);
+      if (hint2.length) h2i.appendChild(sectionGrid(hint2));
+      else {
+        const t = document.createElement("div");
+        t.className = "textline";
+        t.textContent = "(no images)";
+        h2i.appendChild(t);
+      }
+
+      const { d: h3d, inner: h3i } = subDetails("Hint 3", false);
+      if (hint3.length) h3i.appendChild(sectionGrid(hint3));
+      else {
+        const t = document.createElement("div");
+        t.className = "textline";
+        t.textContent = "(no images)";
+        h3i.appendChild(t);
+      }
+
+      // lock 2 and 3 initially
+      h2d.classList.add("locked");
+      h3d.classList.add("locked");
+
+      // unlock chain
+      const unlock = (det) => det.classList.remove("locked");
+      h1d.addEventListener("toggle", () => {
+        if (h1d.open) unlock(h2d);
+      });
+      h2d.addEventListener("toggle", () => {
+        if (h2d.open) unlock(h3d);
+      });
+
+      // if auto-open hint1, unlock hint2 immediately (still not open)
+      if (autoHint1) unlock(h2d);
+
+      section.appendChild(h1d);
+      section.appendChild(h2d);
+      section.appendChild(h3d);
     }
 
+    // SOLUTION
     const solImgs = p.images?.solution || [];
     if (solImgs.length || p.solution_text) {
       const { d: sd, inner } = subDetails("Solution", !!openSol);
@@ -154,20 +168,6 @@ function renderList(puzzles) {
       }
       if (solImgs.length) inner.appendChild(sectionGrid(solImgs));
       section.appendChild(sd);
-    }
-
-    const progImgs = p.images?.progress || [];
-    if (progImgs.length || p.reward_text) {
-      const { d: pd, inner } = subDetails("Progress / Reward", false);
-
-      if (p.reward_text) {
-        const t = document.createElement("div");
-        t.className = "textline";
-        t.textContent = p.reward_text;
-        inner.appendChild(t);
-      }
-      if (progImgs.length) inner.appendChild(sectionGrid(progImgs));
-      section.appendChild(pd);
     }
 
     d.appendChild(s);
@@ -208,7 +208,7 @@ async function main() {
 
   q?.addEventListener("input", rerender);
   $("#toggleAllSolutions")?.addEventListener("change", rerender);
-  $("#toggleAllHints")?.addEventListener("change", rerender);
+  $("#toggleAutoHint1")?.addEventListener("change", rerender);
 
   rerender();
 }
