@@ -41,27 +41,32 @@ function subDetails(title, openByDefault = false) {
   return { d, inner };
 }
 
-function matchesQuery(p, q) {
+function matchesQuery(p, q, impossibleMap) {
   if (!q) return true;
   q = q.toLowerCase().trim();
+
+  const impossibleName = impossibleMap?.[p.id] || "";
+
   const hay = [
     `#${pad3(p.id)}`,
     p.title || "",
+    impossibleName,
     p.solution_text || "",
   ].join(" ").toLowerCase();
+
   return hay.includes(q);
 }
 
-function renderList(puzzles) {
+function renderList(puzzles, impossibleMap) {
   const list = $("#list");
   list.innerHTML = "";
 
   const openSol = $("#toggleAllSolutions")?.checked;
-  const autoHint1 = $("#toggleAutoHint1")?.checked;
 
   for (const p of puzzles) {
     const d = document.createElement("details");
     d.className = "puzzle";
+    d.dataset.pid = String(p.id); // ✅ used by random puzzle jump
 
     const s = document.createElement("summary");
 
@@ -80,9 +85,20 @@ function renderList(puzzles) {
       (acc, arr) => acc + (arr?.length || 0),
       0
     );
+
     const count = document.createElement("span");
     count.textContent = `${imgCount} imgs`;
     meta.appendChild(count);
+
+    // impossible marker (from impossible.json)
+    const impossibleName = impossibleMap?.[p.id];
+    if (impossibleName) {
+      const imp = document.createElement("span");
+      imp.className = "impossible";
+      imp.title = impossibleName;
+      imp.textContent = "Impossible";
+      meta.appendChild(imp);
+    }
 
     s.appendChild(badge);
     s.appendChild(title);
@@ -107,7 +123,7 @@ function renderList(puzzles) {
 
     const hasAnyHints = hint1.length || hint2.length || hint3.length;
     if (hasAnyHints) {
-      const { d: h1d, inner: h1i } = subDetails("Hint 1", !!autoHint1);
+      const { d: h1d, inner: h1i } = subDetails("Hint 1", false);
       if (hint1.length) h1i.appendChild(sectionGrid(hint1));
       else {
         const t = document.createElement("div");
@@ -134,21 +150,12 @@ function renderList(puzzles) {
         h3i.appendChild(t);
       }
 
-      // lock 2 and 3 initially
       h2d.classList.add("locked");
       h3d.classList.add("locked");
 
-      // unlock chain
       const unlock = (det) => det.classList.remove("locked");
-      h1d.addEventListener("toggle", () => {
-        if (h1d.open) unlock(h2d);
-      });
-      h2d.addEventListener("toggle", () => {
-        if (h2d.open) unlock(h3d);
-      });
-
-      // if auto-open hint1, unlock hint2 immediately (still not open)
-      if (autoHint1) unlock(h2d);
+      h1d.addEventListener("toggle", () => { if (h1d.open) unlock(h2d); });
+      h2d.addEventListener("toggle", () => { if (h2d.open) unlock(h3d); });
 
       section.appendChild(h1d);
       section.appendChild(h2d);
@@ -176,18 +183,67 @@ function renderList(puzzles) {
   }
 }
 
+async function fetchJson(url) {
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${url}`);
+  return res.json();
+}
+
+function normalizeImpossible(raw) {
+  const map = {};
+  for (const [k, v] of Object.entries(raw || {})) {
+    const n = Number(k);
+    if (Number.isFinite(n)) map[n] = String(v);
+  }
+  return map;
+}
+
+function flashElement(el) {
+  // quick inline “highlight flash” without changing your CSS file
+  const oldOutline = el.style.outline;
+  const oldOutlineOffset = el.style.outlineOffset;
+  const oldTransition = el.style.transition;
+
+  el.style.transition = "outline 120ms ease";
+  el.style.outline = "3px solid rgba(234,158,68,.95)";
+  el.style.outlineOffset = "4px";
+
+  setTimeout(() => {
+    el.style.outline = "3px solid rgba(234,158,68,.0)";
+  }, 220);
+
+  setTimeout(() => {
+    el.style.outline = oldOutline;
+    el.style.outlineOffset = oldOutlineOffset;
+    el.style.transition = oldTransition;
+  }, 520);
+}
+
+function jumpToPuzzle(pid) {
+  const el = document.querySelector(`details.puzzle[data-pid="${pid}"]`);
+  if (!el) return false;
+
+  // open puzzle
+  el.open = true;
+
+  // scroll + flash
+  el.scrollIntoView({ behavior: "smooth", block: "start" });
+  flashElement(el);
+
+  return true;
+}
+
 async function main() {
   const status = $("#status");
   status.textContent = "Loading puzzles.json…";
 
   const BASE = new URL(".", window.location.href).href;
-  const jsonUrl = BASE + "puzzles.json";
+  const puzzlesUrl = BASE + "puzzles.json";
+  const impossibleUrl = BASE + "impossible.json";
 
-  let data;
+  let puzzlesData;
   try {
-    const res = await fetch(jsonUrl, { cache: "no-store" });
-    if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${jsonUrl}`);
-    data = await res.json();
+    puzzlesData = await fetchJson(puzzlesUrl);
   } catch (e) {
     status.textContent =
       "Failed to load puzzles.json. Ensure puzzles.json is in repo root and GitHub Pages is deploying from root.";
@@ -195,20 +251,44 @@ async function main() {
     return;
   }
 
-  const puzzles = data.puzzles || [];
+  // impossible.json is optional
+  let impossibleMap = {};
+  try {
+    const impRaw = await fetchJson(impossibleUrl);
+    impossibleMap = normalizeImpossible(impRaw);
+  } catch (e) {
+    console.warn("impossible.json not found or failed to load (optional).", e);
+    impossibleMap = {};
+  }
+
+  const puzzles = puzzlesData.puzzles || [];
   status.textContent = `Loaded ${puzzles.length} puzzles.`;
 
+  // We'll keep the currently displayed list here (for random)
+  let currentFiltered = puzzles.slice();
+
   const q = $("#q");
+
   const rerender = () => {
     const query = (q?.value || "").trim();
-    const filtered = puzzles.filter((p) => matchesQuery(p, query));
-    status.textContent = `Showing ${filtered.length} / ${puzzles.length}`;
-    renderList(filtered);
+    currentFiltered = puzzles.filter((p) => matchesQuery(p, query, impossibleMap));
+    status.textContent = `Showing ${currentFiltered.length} / ${puzzles.length}`;
+    renderList(currentFiltered, impossibleMap);
   };
 
   q?.addEventListener("input", rerender);
   $("#toggleAllSolutions")?.addEventListener("change", rerender);
-  $("#toggleAutoHint1")?.addEventListener("change", rerender);
+
+  // 🎲 Random puzzle button
+  const randomBtn = $("#randomBtn");
+  randomBtn?.addEventListener("click", () => {
+    if (!currentFiltered.length) return;
+
+    const pick = currentFiltered[Math.floor(Math.random() * currentFiltered.length)];
+    // After rerender, the DOM exists. We can jump immediately.
+    // If the list is long, scroll will move you right to it.
+    jumpToPuzzle(pick.id);
+  });
 
   rerender();
 }
