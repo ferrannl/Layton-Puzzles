@@ -29,7 +29,7 @@
   --imgRadius:6px;
 
   /* Fixed crop amount (CSS pixels). Stable across devices/zoom. */
-  --cropTop: 32px;
+  --cropTop: 0px;
 }
 
 /* “Thick black border” for text */
