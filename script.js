@@ -2,7 +2,6 @@ const $ = (sel) => document.querySelector(sel);
 
 const PAGE_SIZE = 10;
 
-// pagerTop optional (removed); bottom expected
 const els = {
   q: $("#q"),
   status: $("#status"),
@@ -19,14 +18,9 @@ function sanitizeTitle(t, pid) {
   if (!t) return `Puzzle ${pad3(pid)}`;
 
   let s = String(t).trim();
-
-  // Remove "Puzzle 003", "Puzzle 003 -", etc.
   s = s.replace(/^\s*puzzle\s*\d{3}\s*[-:–—]?\s*/i, "");
-  // Remove "003 -", "003 –", etc.
   s = s.replace(/^\s*\d{3}\s*[-:–—]\s*/i, "");
-  // Remove plain "003 " (digits + space)
   s = s.replace(/^\s*\d{3}\s+/i, "");
-
   s = s.trim();
   return s || `Puzzle ${pad3(pid)}`;
 }
@@ -47,9 +41,7 @@ function loadSolved() {
 }
 
 function saveSolved(map) {
-  try {
-    localStorage.setItem(SOLVED_KEY, JSON.stringify(map));
-  } catch {}
+  try { localStorage.setItem(SOLVED_KEY, JSON.stringify(map)); } catch {}
 }
 
 function isSolved(pid, solvedMap) {
@@ -88,9 +80,9 @@ function wireLightboxOnce() {
 
 /* ---------- Images ---------- */
 
-function makeImg(src, { hero=false } = {}) {
+function makeImg(src, { cropTop=false } = {}) {
   const wrap = document.createElement("div");
-  wrap.className = "thumb" + (hero ? " hero" : "");
+  wrap.className = "thumb" + (cropTop ? " cropTop" : "");
 
   const img = document.createElement("img");
   img.className = "pimg";
@@ -108,13 +100,17 @@ function makeImg(src, { hero=false } = {}) {
   return wrap;
 }
 
-function sectionGrid(urls, { cropFirst=false } = {}) {
+/**
+ * cropIndex: number or null
+ * - if cropIndex=0 -> crop first image
+ * - if cropIndex=1 -> crop second image
+ */
+function sectionGrid(urls, { cropIndex=null } = {}) {
   const grid = document.createElement("div");
   grid.className = "grid";
 
   (urls || []).forEach((u, idx) => {
-    const hero = cropFirst && idx === 0;
-    grid.appendChild(makeImg(u, { hero }));
+    grid.appendChild(makeImg(u, { cropTop: cropIndex === idx }));
   });
 
   return grid;
@@ -157,6 +153,14 @@ function matchesQuery(p, q, impossibleMap) {
   return hay.includes(q);
 }
 
+/* ---------- Close other puzzles when one opens ---------- */
+
+function closeOtherPuzzles(current) {
+  document.querySelectorAll("details.puzzle[open]").forEach((det) => {
+    if (det !== current) det.open = false;
+  });
+}
+
 /* ---------- Render ---------- */
 
 function renderList(puzzlesPage, impossibleMap, solvedMap) {
@@ -167,6 +171,11 @@ function renderList(puzzlesPage, impossibleMap, solvedMap) {
     const d = document.createElement("details");
     d.className = "puzzle";
     d.dataset.pid = String(p.id);
+
+    // when this opens, close the others
+    d.addEventListener("toggle", () => {
+      if (d.open) closeOtherPuzzles(d);
+    });
 
     const s = document.createElement("summary");
 
@@ -199,7 +208,6 @@ function renderList(puzzlesPage, impossibleMap, solvedMap) {
     solvedBtn.dataset.solved = isSolved(p.id, solvedMap) ? "true" : "false";
     solvedBtn.setAttribute("aria-pressed", solvedBtn.dataset.solved === "true" ? "true" : "false");
 
-    // Prevent summary toggle when clicking button
     solvedBtn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -218,10 +226,10 @@ function renderList(puzzlesPage, impossibleMap, solvedMap) {
     const section = document.createElement("div");
     section.className = "section";
 
-    // PUZZLE IMAGES (crop FIRST image only, fixed px via CSS)
+    // PUZZLE IMAGES (crop FIRST image only)
     const puzzleImgs = p.images?.puzzle || [];
     if (puzzleImgs.length) {
-      section.appendChild(sectionGrid(puzzleImgs, { cropFirst:true }));
+      section.appendChild(sectionGrid(puzzleImgs, { cropIndex: 0 }));
     }
 
     // HINTS
@@ -258,11 +266,10 @@ function renderList(puzzlesPage, impossibleMap, solvedMap) {
       row.appendChild(h3d);
       section.appendChild(row);
 
-      // spacing between hints and solution
       section.appendChild(document.createElement("br"));
     }
 
-    // SOLUTION
+    // SOLUTION (crop SECOND image only)
     const solImgs = p.images?.solution || [];
     if (solImgs.length || p.solution_text) {
       const { d: sd, inner } = subDetails("Solution", "solution", !!openSol);
@@ -273,7 +280,8 @@ function renderList(puzzlesPage, impossibleMap, solvedMap) {
         t.textContent = p.solution_text;
         inner.appendChild(t);
       }
-      if (solImgs.length) inner.appendChild(sectionGrid(solImgs));
+
+      if (solImgs.length) inner.appendChild(sectionGrid(solImgs, { cropIndex: 1 }));
       section.appendChild(sd);
     }
 
