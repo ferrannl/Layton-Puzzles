@@ -123,7 +123,7 @@ function renderList(puzzlesPage, impossibleMap) {
       section.appendChild(sectionGrid(puzzleImgs));
     }
 
-    // HINTS row (left -> right)
+    // HINTS row (left->right) with sequential lock
     const hint1 = p.images?.hint1 || [];
     const hint2 = p.images?.hint2 || [];
     const hint3 = p.images?.hint3 || [];
@@ -149,9 +149,9 @@ function renderList(puzzlesPage, impossibleMap) {
       if (hint3.length) h3i.appendChild(sectionGrid(hint3));
       else h3i.appendChild(Object.assign(document.createElement("div"), { className:"textline", textContent:"(no images)" }));
 
-      // sequential lock
       h2d.classList.add("locked");
       h3d.classList.add("locked");
+
       const unlock = (det) => det.classList.remove("locked");
       h1d.addEventListener("toggle", () => { if (h1d.open) unlock(h2d); });
       h2d.addEventListener("toggle", () => { if (h2d.open) unlock(h3d); });
@@ -219,12 +219,12 @@ function jumpToPuzzle(pid) {
   return true;
 }
 
-/* ---------- Fancy pager (top + bottom) ---------- */
+/* ---------- Fancy pager ---------- */
 
-function mkBtn(label, id) {
+function mkBtn(label, id, primary=false) {
   const b = document.createElement("button");
   b.type = "button";
-  b.className = "pbtn";
+  b.className = "pbtn" + (primary ? " pbtnPrimary" : "");
   b.id = id;
   b.textContent = label;
   return b;
@@ -247,68 +247,77 @@ function mkDots() {
 }
 
 function buildPager(container, state) {
-  if (!container) return;
-
   container.innerHTML = "";
 
-  // Row 1: Prev / Random / Next (always visible)
-  const row1 = document.createElement("div");
-  row1.className = "pagerRow";
+  const left = document.createElement("div");
+  left.className = "pagerLeft";
+
+  const right = document.createElement("div");
+  right.className = "pagerRight";
+
+  const nums = document.createElement("div");
+  nums.className = "pagerNums";
 
   const prev = mkBtn("← Prev", container.id + "_prev");
-  const rand = mkBtn("🎲 Random", container.id + "_rand");
-  rand.classList.add("pbtnPrimary");
   const next = mkBtn("Next →", container.id + "_next");
+  const rand = mkBtn("🎲 Random", container.id + "_rand", true);
 
+  // disable
   prev.disabled = state.page <= 1;
   next.disabled = state.page >= state.totalPages;
 
-  row1.appendChild(prev);
-  row1.appendChild(rand);
-  row1.appendChild(next);
+  left.appendChild(prev);
 
-  // Row 2: Page numbers (index strip)
-  const row2 = document.createElement("div");
-  row2.className = "pagerNums";
-
+  // page numbers window
   const total = state.totalPages;
   const page = state.page;
 
-  // show: 1 … (page-2..page+2) … last
-  const windowSize = 2;
+  const windowSize = 2; // show current ±2
   const start = clamp(page - windowSize, 1, total);
-  const end   = clamp(page + windowSize, 1, total);
+  const end = clamp(page + windowSize, 1, total);
 
-  row2.appendChild(mkNumBtn(1, page === 1));
-  if (start > 2) row2.appendChild(mkDots());
+  // Always show 1
+  nums.appendChild(mkNumBtn(1, page === 1));
+
+  if (start > 2) nums.appendChild(mkDots());
 
   for (let p = Math.max(2, start); p <= Math.min(total - 1, end); p++) {
-    row2.appendChild(mkNumBtn(p, p === page));
+    nums.appendChild(mkNumBtn(p, p === page));
   }
 
-  if (end < total - 1) row2.appendChild(mkDots());
-  if (total > 1) row2.appendChild(mkNumBtn(total, page === total));
+  if (end < total - 1) nums.appendChild(mkDots());
 
-  // Row 3: Progress track
-  const row3 = document.createElement("div");
-  row3.className = "pagerProgress";
-  row3.innerHTML = `
-    <div class="pagerTrack" aria-hidden="true">
-      <div class="pagerPill" id="${container.id}_pill"></div>
+  // Always show last if >1
+  if (total > 1) nums.appendChild(mkNumBtn(total, page === total));
+
+  right.appendChild(rand);
+  right.appendChild(next);
+
+  container.appendChild(left);
+  container.appendChild(nums);
+  container.appendChild(right);
+
+  // progress block
+  const prog = document.createElement("div");
+  prog.className = "pagerProgress";
+  prog.innerHTML = `
+    <div style="display:flex;gap:10px;align-items:center;">
+      <div class="pagerTrack" aria-hidden="true">
+        <div class="pagerPill" id="${container.id}_pill"></div>
+      </div>
+      <div class="pagerLabel" id="${container.id}_label"></div>
     </div>
-    <div class="pagerLabel" id="${container.id}_label"></div>
   `;
+  container.appendChild(prog);
 
-  container.appendChild(row1);
-  container.appendChild(row2);
-  container.appendChild(row3);
-
-  // pill + label
+  // set pill + label
   const label = $("#" + container.id + "_label");
   const pill = $("#" + container.id + "_pill");
-  label.textContent = `Page ${page} / ${total} • ${PAGE_SIZE} per page`;
+
+  label.textContent = `Page ${page} / ${total} • ${PAGE_SIZE}/page`;
 
   const frac = total <= 1 ? 0 : (page - 1) / (total - 1);
+  // pill moves across track using translateX percentage
   pill.style.transform = `translateX(${Math.round(frac * 100)}%)`;
 
   // events
@@ -322,7 +331,6 @@ function buildPager(container, state) {
 
   rand.addEventListener("click", () => {
     if (!state.filtered.length) return;
-
     const pick = state.filtered[Math.floor(Math.random() * state.filtered.length)];
     const idx = state.filtered.findIndex(p => p.id === pick.id);
     const targetPage = clamp(Math.floor(idx / PAGE_SIZE) + 1, 1, state.totalPages);
