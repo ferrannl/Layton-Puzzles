@@ -1,3 +1,4 @@
+
 const $ = (sel) => document.querySelector(sel);
 
 const PAGE_SIZE = 10;
@@ -16,7 +17,6 @@ function pad3(n){ return String(n).padStart(3, "0"); }
 
 function sanitizeTitle(t, pid) {
   if (!t) return `Puzzle ${pad3(pid)}`;
-
   let s = String(t).trim();
   s = s.replace(/^\s*puzzle\s*\d{3}\s*[-:–—]?\s*/i, "");
   s = s.replace(/^\s*\d{3}\s*[-:–—]\s*/i, "");
@@ -25,7 +25,55 @@ function sanitizeTitle(t, pid) {
   return s || `Puzzle ${pad3(pid)}`;
 }
 
-/* ---------- Solved State (localStorage) ---------- */
+/* ---------- Theme ---------- */
+
+const THEME_KEY = "layton_theme_v1";
+
+function getTheme() {
+  const saved = localStorage.getItem(THEME_KEY);
+  return (saved === "light" || saved === "dark") ? saved : "dark";
+}
+
+function setTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
+  try { localStorage.setItem(THEME_KEY, theme); } catch {}
+}
+
+function installThemeToggle() {
+  const headerWrap = document.querySelector(".topbar .wrap");
+  if (!headerWrap) return;
+
+  // Put toggle in the controls row if possible
+  const controls = document.querySelector(".controls");
+  if (!controls) return;
+
+  const holder = document.createElement("div");
+  holder.className = "themeToggle";
+
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "themePill";
+  btn.id = "themeBtn";
+
+  const refreshLabel = () => {
+    const t = getTheme();
+    btn.innerHTML = `<span>Theme: ${t === "dark" ? "Dark" : "Light"}</span>`;
+  };
+
+  btn.addEventListener("click", () => {
+    const next = getTheme() === "dark" ? "light" : "dark";
+    setTheme(next);
+    refreshLabel();
+  });
+
+  holder.appendChild(btn);
+  controls.appendChild(holder);
+
+  setTheme(getTheme());
+  refreshLabel();
+}
+
+/* ---------- Solved State ---------- */
 
 const SOLVED_KEY = "layton_solved_v1";
 
@@ -71,7 +119,6 @@ function closeLightbox() {
 
 function wireLightboxOnce() {
   if (!els.lightbox) return;
-
   els.lightbox.addEventListener("click", () => closeLightbox());
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") closeLightbox();
@@ -100,11 +147,6 @@ function makeImg(src, { cropTop=false } = {}) {
   return wrap;
 }
 
-/**
- * cropIndex: number or null
- * - if cropIndex=0 -> crop first image
- * - if cropIndex=1 -> crop second image
- */
 function sectionGrid(urls, { cropIndex=null } = {}) {
   const grid = document.createElement("div");
   grid.className = "grid";
@@ -172,7 +214,6 @@ function renderList(puzzlesPage, impossibleMap, solvedMap) {
     d.className = "puzzle";
     d.dataset.pid = String(p.id);
 
-    // when this opens, close the others
     d.addEventListener("toggle", () => {
       if (d.open) closeOtherPuzzles(d);
     });
@@ -190,7 +231,6 @@ function renderList(puzzlesPage, impossibleMap, solvedMap) {
     const meta = document.createElement("span");
     meta.className = "meta";
 
-    // Infeasible pill
     const impossibleName = impossibleMap?.[p.id];
     if (impossibleName) {
       const imp = document.createElement("span");
@@ -200,7 +240,6 @@ function renderList(puzzlesPage, impossibleMap, solvedMap) {
       meta.appendChild(imp);
     }
 
-    // Fancy solved toggle
     const solvedBtn = document.createElement("button");
     solvedBtn.type = "button";
     solvedBtn.className = "solvedBtn";
@@ -226,13 +265,13 @@ function renderList(puzzlesPage, impossibleMap, solvedMap) {
     const section = document.createElement("div");
     section.className = "section";
 
-    // PUZZLE IMAGES (crop FIRST image only)
+    // Puzzle images: crop FIRST image
     const puzzleImgs = p.images?.puzzle || [];
     if (puzzleImgs.length) {
       section.appendChild(sectionGrid(puzzleImgs, { cropIndex: 0 }));
     }
 
-    // HINTS
+    // Hints
     const hint1 = p.images?.hint1 || [];
     const hint2 = p.images?.hint2 || [];
     const hint3 = p.images?.hint3 || [];
@@ -254,7 +293,6 @@ function renderList(puzzlesPage, impossibleMap, solvedMap) {
       if (hint3.length) h3i.appendChild(sectionGrid(hint3));
       else h3i.appendChild(Object.assign(document.createElement("div"), { className:"textline", textContent:"(no images)" }));
 
-      // sequential unlock
       h2d.classList.add("locked");
       h3d.classList.add("locked");
       const unlock = (det) => det.classList.remove("locked");
@@ -269,7 +307,7 @@ function renderList(puzzlesPage, impossibleMap, solvedMap) {
       section.appendChild(document.createElement("br"));
     }
 
-    // SOLUTION (crop SECOND image only)
+    // Solution: crop SECOND image
     const solImgs = p.images?.solution || [];
     if (solImgs.length || p.solution_text) {
       const { d: sd, inner } = subDetails("Solution", "solution", !!openSol);
@@ -280,7 +318,6 @@ function renderList(puzzlesPage, impossibleMap, solvedMap) {
         t.textContent = p.solution_text;
         inner.appendChild(t);
       }
-
       if (solImgs.length) inner.appendChild(sectionGrid(solImgs, { cropIndex: 1 }));
       section.appendChild(sd);
     }
@@ -311,10 +348,7 @@ function normalizeImpossible(raw) {
 /* ---------- Pager ---------- */
 
 function clamp(n, lo, hi){ return Math.max(lo, Math.min(hi, n)); }
-
-function scrollToTop() {
-  window.scrollTo({ top: 0, behavior: "smooth" });
-}
+function scrollToTop() { window.scrollTo({ top: 0, behavior: "smooth" }); }
 
 function jumpToPuzzle(pid) {
   const el = document.querySelector(`details.puzzle[data-pid="${pid}"]`);
@@ -460,8 +494,10 @@ function buildPager(container, state) {
 
 async function main() {
   wireLightboxOnce();
+  installThemeToggle();
 
-  els.status.textContent = "Loading puzzles.json…";
+  // you already nuked status; keep it hidden
+  if (els.status) els.status.style.display = "none";
 
   const BASE = new URL(".", window.location.href).href;
   const puzzlesUrl = BASE + "puzzles.json";
@@ -473,7 +509,6 @@ async function main() {
   try {
     puzzlesData = await fetchJson(puzzlesUrl);
   } catch (e) {
-    els.status.textContent = "Failed to load puzzles.json (check GitHub Pages root deploy).";
     console.error(e);
     return;
   }
@@ -487,7 +522,6 @@ async function main() {
   }
 
   const puzzles = puzzlesData.puzzles || [];
-  els.status.textContent = `Loaded ${puzzles.length} puzzles.`;
 
   const state = {
     page: 1,
@@ -506,9 +540,7 @@ async function main() {
     const start = (state.page - 1) * PAGE_SIZE;
     const pageItems = state.filtered.slice(start, start + PAGE_SIZE);
 
-    els.status.textContent = "";
     renderList(pageItems, impossibleMap, solvedMap);
-
     buildPager(els.pagerBottom, state);
   };
 
