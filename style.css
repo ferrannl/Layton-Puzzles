@@ -1,20 +1,16 @@
 :root{
-  --bg:#0e0a06;
-  --panel:#1a120b;
-  --panel2:#14100c;
-  --text:#fff8ef;
-  --muted:#d7c6b6;
-  --line:rgba(255,255,255,.10);
+  /* Your palette (primary) */
+  --o1:#d66a00; /* main orange */
+  --o2:#ea9e44; /* amber */
+  --r1:#b62c00; /* deep red */
+  --t1:#7e4716; /* tan/brown */
 
-  /* Layton palette */
-  --brown:#52402e;
-  --orange:#d66a00;
-  --amber:#ea9e44;
-  --red:#b62c00;
-  --tan:#7e4716;
-
-  --accent: var(--orange);
-  --accent2: var(--amber);
+  /* Neutrals */
+  --bg:#0b0705;
+  --panel:#120c08;
+  --text:#ffffff;
+  --muted:rgba(255,255,255,.78);
+  --line:rgba(255,255,255,.14);
 }
 
 *{box-sizing:border-box}
@@ -22,149 +18,172 @@ html,body{height:100%}
 body{
   margin:0;
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji","Segoe UI Emoji";
+  background: var(--bg);
   color:var(--text);
-  background:
-    radial-gradient(900px 600px at 15% -10%, rgba(214,106,0,.18), transparent 60%),
-    radial-gradient(900px 700px at 85% 0%, rgba(234,158,68,.10), transparent 60%),
-    radial-gradient(1200px 900px at 50% 120%, rgba(82,64,46,.25), transparent 60%),
-    var(--bg);
 }
 
+/* Layout */
 .wrap{max-width:1100px;margin:0 auto;padding:18px}
 
+/* Topbar: flat, 2-tone */
 .topbar{
-  border-bottom:1px solid var(--line);
-  background: linear-gradient(180deg, rgba(26,18,11,.95), rgba(26,18,11,.55));
-  position:sticky;top:0;backdrop-filter: blur(10px);
-  z-index:20;
+  position:sticky;top:0;z-index:20;
+  background: var(--panel);
+  border-bottom:3px solid var(--o1);
 }
-
 h1{margin:6px 0 2px;font-size:22px;letter-spacing:.02em}
 .sub{margin:0 0 12px;color:var(--muted);font-size:14px}
 
 .controls{
   display:flex;gap:12px;flex-wrap:wrap;align-items:center;
 }
+
+/* Search: simple, strong accent focus */
 #q{
   flex:1;
   min-width:260px;
   padding:10px 12px;
-  border-radius:12px;
-  border:1px solid var(--line);
-  background: rgba(20,16,12,.75);
+  border-radius:10px;
+  border:2px solid var(--t1);
+  background:#0f0a07;
   color:var(--text);
   outline:none;
 }
-#q:focus{border-color:rgba(214,106,0,.55)}
+#q:focus{
+  border-color: var(--o1);
+  box-shadow: 0 0 0 3px rgba(214,106,0,.25);
+}
 .chk{display:flex;gap:8px;align-items:center;color:var(--muted);font-size:13px}
 
 .status{color:var(--muted);padding:12px 0}
-
 .list{display:flex;flex-direction:column;gap:12px;padding-bottom:28px}
 
-/* Puzzle card: NOT too rounded */
+/* Puzzle card: flat blocks, strong color bar */
 .puzzle{
-  border:1px solid var(--line);
+  border:2px solid var(--t1);
   border-radius:6px;
-  background: linear-gradient(180deg, rgba(26,18,11,.78), rgba(20,16,12,.65));
+  background: var(--panel);
   overflow:hidden;
 }
 .puzzle > summary{
   cursor:pointer;
   list-style:none;
-  padding:14px 14px;
+  padding:12px 14px;
   display:flex;align-items:baseline;gap:10px;
+  background: #100a06;
+  border-bottom:2px solid rgba(126,71,22,.5);
 }
 .puzzle > summary::-webkit-details-marker{display:none}
 
+/* Number badge: orange + black */
 .badge{
   font-variant-numeric: tabular-nums;
   padding:3px 8px;
-  border:1px solid rgba(234,158,68,.35);
   border-radius:999px;
-  color:var(--muted);
+  background: var(--o1);
+  color:#000;
+  font-weight:700;
   font-size:12px;
-  background: rgba(234,158,68,.08);
 }
+
+/* Title */
 .title{font-size:15px}
 
+/* Meta: keep simple */
 .meta{
   margin-left:auto;
-  color:var(--muted);
+  color:rgba(255,255,255,.75);
   font-size:12px;
   display:flex;gap:10px;align-items:center;
 }
 
+/* Inner section: flat */
 .section{
-  border-top:1px solid var(--line);
   padding:12px 14px 16px;
-  background: rgba(20,16,12,.40);
-}
-.section h3{
-  margin:10px 0 8px;
-  font-size:13px;
-  color:var(--muted);
-  text-transform:uppercase;
-  letter-spacing:.08em;
+  background: var(--panel);
 }
 
-/* Image grid: consistent thumbs */
+/* Section headers: bold, single color */
+.section h3{
+  margin:12px 0 8px;
+  font-size:12px;
+  letter-spacing:.10em;
+  text-transform:uppercase;
+  color: var(--o2);
+  display:inline-block;
+  padding:4px 8px;
+  border-left:4px solid var(--r1);
+  background:#0f0a07;
+}
+
+/* Grid + thumbs */
 .grid{
   display:grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap:10px;
 }
 .thumb{
-  border:1px solid var(--line);
-  background: rgba(255,255,255,.03);
+  border:2px solid rgba(255,255,255,.10);
+  background:#0f0a07;
   padding:8px;
   display:flex;
   align-items:center;
   justify-content:center;
 }
+
+/* Image: consistent, sharp edges */
 img.pimg{
   width:251px;
   height:188px;
-  object-fit:contain; /* no random huge images, no cropping */
+  object-fit:contain;
   display:block;
-  background: rgba(0,0,0,.10);
-  border-radius:0; /* keep puzzle imagery sharp */
+  background:#0b0705;
+  border:2px solid rgba(214,106,0,.25);
+  border-radius:0;
 }
 
-/* Sub details: still neat but not super rounded */
+/* Subdetails: flat, with strong orange header */
 .subdetails{
-  border:1px solid var(--line);
+  margin-top:10px;
+  border:2px solid rgba(126,71,22,.65);
   border-radius:6px;
   overflow:hidden;
-  background: rgba(26,18,11,.35);
-  margin-top:10px;
+  background:#0f0a07;
 }
 .subdetails > summary{
   cursor:pointer;
   list-style:none;
   padding:10px 12px;
-  color:var(--text);
   display:flex;align-items:center;gap:10px;
+  background: var(--t1);
+  color:#fff;
+  font-weight:700;
 }
 .subdetails > summary::-webkit-details-marker{display:none}
-.subdetails .inner{padding:10px 12px;border-top:1px solid var(--line)}
+.subdetails .inner{
+  padding:10px 12px;
+  border-top:2px solid rgba(0,0,0,.35);
+  background: var(--panel);
+}
 
 .textline{color:var(--muted);margin:6px 0 0;font-size:14px}
 
-/* Locked hints */
+/* Locked hints: simple “disabled” look, no modern effects */
 .locked{
   opacity:.45;
   pointer-events:none;
 }
 .locked > summary{
-  color:rgba(255,248,239,.7);
+  background:#2a1a0f;
+  color:rgba(255,255,255,.70);
 }
 .locked > summary::after{
-  content:" (locked)";
-  color:rgba(234,158,68,.75);
+  content:"  (locked)";
+  color: rgba(234,158,68,.9);
+  font-weight:600;
   font-size:12px;
   margin-left:6px;
 }
 
-/* Footer removed, but keep class in case */
+/* Hide footer if any */
 .footer{display:none}
