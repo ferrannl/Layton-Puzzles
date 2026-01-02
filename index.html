@@ -10,7 +10,7 @@
   <header class="topbar">
     <div class="wrap">
       <h1>Puzzle Index</h1>
-      <p class="sub">Search, open a puzzle, then reveal hints one-by-one and view the solution.</p>
+      <p class="sub">Search, pick a random puzzle, open hints left-to-right, then view the solution.</p>
 
       <div class="controls">
         <input id="q" type="search" placeholder="Search by # or title… e.g. 63, village, picarats" />
@@ -24,12 +24,24 @@
           Auto-open Solutions
         </label>
       </div>
+
+      <div class="pager">
+        <button id="prevPage" class="btn btnSecondary" type="button">Prev</button>
+        <div id="pageInfo" class="pageInfo">Page 1 / 1</div>
+        <button id="nextPage" class="btn btnSecondary" type="button">Next</button>
+      </div>
     </div>
   </header>
 
   <main class="wrap">
     <div id="status" class="status">Loading puzzles…</div>
     <div id="list" class="list"></div>
+
+    <div class="pager pagerBottom">
+      <button id="prevPage2" class="btn btnSecondary" type="button">Prev</button>
+      <div id="pageInfo2" class="pageInfo">Page 1 / 1</div>
+      <button id="nextPage2" class="btn btnSecondary" type="button">Next</button>
+    </div>
   </main>
 
   <script src="script.js"></script>
