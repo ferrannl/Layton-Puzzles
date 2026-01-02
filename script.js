@@ -2,14 +2,15 @@ const $ = (sel) => document.querySelector(sel);
 
 const PAGE_SIZE = 10;
 
-// pagerTop is optional; bottom is expected
+// pagerTop optional (removed); bottom expected
 const els = {
   q: $("#q"),
   status: $("#status"),
   list: $("#list"),
   toggleAllSolutions: $("#toggleAllSolutions"),
-  pagerTop: $("#pagerTop"),       // may be null (you removed it)
-  pagerBottom: $("#pagerBottom"), // exists
+  pagerBottom: $("#pagerBottom"),
+  lightbox: $("#lightbox"),
+  lightboxImg: $("#lightboxImg"),
 };
 
 function pad3(n){ return String(n).padStart(3, "0"); }
@@ -21,10 +22,8 @@ function sanitizeTitle(t, pid) {
 
   // Remove "Puzzle 003", "Puzzle 003 -", etc.
   s = s.replace(/^\s*puzzle\s*\d{3}\s*[-:–—]?\s*/i, "");
-
   // Remove "003 -", "003 –", etc.
   s = s.replace(/^\s*\d{3}\s*[-:–—]\s*/i, "");
-
   // Remove plain "003 " (digits + space)
   s = s.replace(/^\s*\d{3}\s+/i, "");
 
@@ -32,36 +31,100 @@ function sanitizeTitle(t, pid) {
   return s || `Puzzle ${pad3(pid)}`;
 }
 
-function makeImg(src, opts = {}) {
+/* ---------- Solved State (localStorage) ---------- */
+
+const SOLVED_KEY = "layton_solved_v1";
+
+function loadSolved() {
+  try {
+    const raw = localStorage.getItem(SOLVED_KEY);
+    if (!raw) return {};
+    const obj = JSON.parse(raw);
+    return (obj && typeof obj === "object") ? obj : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveSolved(map) {
+  try {
+    localStorage.setItem(SOLVED_KEY, JSON.stringify(map));
+  } catch {}
+}
+
+function isSolved(pid, solvedMap) {
+  return !!solvedMap[String(pid)];
+}
+
+function setSolved(pid, val, solvedMap) {
+  solvedMap[String(pid)] = !!val;
+  saveSolved(solvedMap);
+}
+
+/* ---------- Lightbox ---------- */
+
+function openLightbox(src) {
+  if (!els.lightbox || !els.lightboxImg) return;
+  els.lightboxImg.src = src;
+  els.lightbox.classList.add("open");
+  els.lightbox.setAttribute("aria-hidden", "false");
+}
+
+function closeLightbox() {
+  if (!els.lightbox || !els.lightboxImg) return;
+  els.lightbox.classList.remove("open");
+  els.lightbox.setAttribute("aria-hidden", "true");
+  els.lightboxImg.src = "";
+}
+
+function wireLightboxOnce() {
+  if (!els.lightbox) return;
+
+  els.lightbox.addEventListener("click", () => closeLightbox());
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeLightbox();
+  });
+}
+
+/* ---------- Images ---------- */
+
+function makeImg(src, { hero=false } = {}) {
   const wrap = document.createElement("div");
-  wrap.className = "thumb";
+  wrap.className = "thumb" + (hero ? " hero" : "");
 
   const img = document.createElement("img");
-  img.className = "pimg" + (opts.cropTop ? " cropTop" : "");
+  img.className = "pimg";
   img.loading = "lazy";
   img.referrerPolicy = "no-referrer";
   img.src = src;
+
+  img.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    openLightbox(src);
+  });
 
   wrap.appendChild(img);
   return wrap;
 }
 
-function sectionGrid(urls, opts = {}) {
+function sectionGrid(urls, { cropFirst=false } = {}) {
   const grid = document.createElement("div");
   grid.className = "grid";
 
   (urls || []).forEach((u, idx) => {
-    // Only crop the FIRST image in the PUZZLE question section
-    const cropTop = !!opts.cropFirst && idx === 0;
-    grid.appendChild(makeImg(u, { cropTop }));
+    const hero = cropFirst && idx === 0;
+    grid.appendChild(makeImg(u, { hero }));
   });
 
   return grid;
 }
 
-function subDetails(title, openByDefault = false, extraClass = "") {
+/* ---------- Subdetails ---------- */
+
+function subDetails(title, className="", openByDefault=false) {
   const d = document.createElement("details");
-  d.className = "subdetails" + (extraClass ? " " + extraClass : "");
+  d.className = "subdetails" + (className ? ` ${className}` : "");
   if (openByDefault) d.open = true;
 
   const s = document.createElement("summary");
@@ -74,6 +137,8 @@ function subDetails(title, openByDefault = false, extraClass = "") {
   d.appendChild(inner);
   return { d, inner };
 }
+
+/* ---------- Search ---------- */
 
 function matchesQuery(p, q, impossibleMap) {
   if (!q) return true;
@@ -92,7 +157,9 @@ function matchesQuery(p, q, impossibleMap) {
   return hay.includes(q);
 }
 
-function renderList(puzzlesPage, impossibleMap) {
+/* ---------- Render ---------- */
+
+function renderList(puzzlesPage, impossibleMap, solvedMap) {
   els.list.innerHTML = "";
   const openSol = els.toggleAllSolutions?.checked;
 
@@ -114,6 +181,7 @@ function renderList(puzzlesPage, impossibleMap) {
     const meta = document.createElement("span");
     meta.className = "meta";
 
+    // Infeasible pill
     const impossibleName = impossibleMap?.[p.id];
     if (impossibleName) {
       const imp = document.createElement("span");
@@ -123,6 +191,26 @@ function renderList(puzzlesPage, impossibleMap) {
       meta.appendChild(imp);
     }
 
+    // Fancy solved toggle
+    const solvedBtn = document.createElement("button");
+    solvedBtn.type = "button";
+    solvedBtn.className = "solvedBtn";
+    solvedBtn.innerHTML = `<span class="solvedDot" aria-hidden="true"></span><span>Solved</span>`;
+    solvedBtn.dataset.solved = isSolved(p.id, solvedMap) ? "true" : "false";
+    solvedBtn.setAttribute("aria-pressed", solvedBtn.dataset.solved === "true" ? "true" : "false");
+
+    // Prevent summary toggle when clicking button
+    solvedBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const now = !(solvedBtn.dataset.solved === "true");
+      solvedBtn.dataset.solved = now ? "true" : "false";
+      solvedBtn.setAttribute("aria-pressed", now ? "true" : "false");
+      setSolved(p.id, now, solvedMap);
+    });
+
+    meta.appendChild(solvedBtn);
+
     s.appendChild(badge);
     s.appendChild(title);
     s.appendChild(meta);
@@ -130,13 +218,13 @@ function renderList(puzzlesPage, impossibleMap) {
     const section = document.createElement("div");
     section.className = "section";
 
-    // PUZZLE IMAGES (crop FIRST image by 50px from top)
+    // PUZZLE IMAGES (crop FIRST image only, fixed px via CSS)
     const puzzleImgs = p.images?.puzzle || [];
     if (puzzleImgs.length) {
-      section.appendChild(sectionGrid(puzzleImgs, { cropFirst: true }));
+      section.appendChild(sectionGrid(puzzleImgs, { cropFirst:true }));
     }
 
-    // HINTS row
+    // HINTS
     const hint1 = p.images?.hint1 || [];
     const hint2 = p.images?.hint2 || [];
     const hint3 = p.images?.hint3 || [];
@@ -146,22 +234,21 @@ function renderList(puzzlesPage, impossibleMap) {
       const row = document.createElement("div");
       row.className = "hintsRow";
 
-      const { d: h1d, inner: h1i } = subDetails("Hint 1", false, "hint1");
+      const { d: h1d, inner: h1i } = subDetails("Hint 1", "hint1", false);
       if (hint1.length) h1i.appendChild(sectionGrid(hint1));
       else h1i.appendChild(Object.assign(document.createElement("div"), { className:"textline", textContent:"(no images)" }));
 
-      const { d: h2d, inner: h2i } = subDetails("Hint 2", false, "hint2");
+      const { d: h2d, inner: h2i } = subDetails("Hint 2", "hint2", false);
       if (hint2.length) h2i.appendChild(sectionGrid(hint2));
       else h2i.appendChild(Object.assign(document.createElement("div"), { className:"textline", textContent:"(no images)" }));
 
-      const { d: h3d, inner: h3i } = subDetails("Hint 3", false, "hint3");
+      const { d: h3d, inner: h3i } = subDetails("Hint 3", "hint3", false);
       if (hint3.length) h3i.appendChild(sectionGrid(hint3));
       else h3i.appendChild(Object.assign(document.createElement("div"), { className:"textline", textContent:"(no images)" }));
 
       // sequential unlock
       h2d.classList.add("locked");
       h3d.classList.add("locked");
-
       const unlock = (det) => det.classList.remove("locked");
       h1d.addEventListener("toggle", () => { if (h1d.open) unlock(h2d); });
       h2d.addEventListener("toggle", () => { if (h2d.open) unlock(h3d); });
@@ -171,14 +258,14 @@ function renderList(puzzlesPage, impossibleMap) {
       row.appendChild(h3d);
       section.appendChild(row);
 
-      // <br> between hints and solution
+      // spacing between hints and solution
       section.appendChild(document.createElement("br"));
     }
 
     // SOLUTION
     const solImgs = p.images?.solution || [];
     if (solImgs.length || p.solution_text) {
-      const { d: sd, inner } = subDetails("Solution", !!openSol, "solutionBox");
+      const { d: sd, inner } = subDetails("Solution", "solution", !!openSol);
 
       if (p.solution_text) {
         const t = document.createElement("div");
@@ -196,6 +283,8 @@ function renderList(puzzlesPage, impossibleMap) {
   }
 }
 
+/* ---------- Fetch ---------- */
+
 async function fetchJson(url) {
   const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${url}`);
@@ -211,6 +300,8 @@ function normalizeImpossible(raw) {
   return map;
 }
 
+/* ---------- Pager ---------- */
+
 function clamp(n, lo, hi){ return Math.max(lo, Math.min(hi, n)); }
 
 function scrollToTop() {
@@ -224,8 +315,6 @@ function jumpToPuzzle(pid) {
   el.scrollIntoView({ behavior: "smooth", block: "start" });
   return true;
 }
-
-/* ---------- Pager ---------- */
 
 function mkBtn(label, id) {
   const b = document.createElement("button");
@@ -278,10 +367,10 @@ function buildPager(container, state) {
   const row1 = document.createElement("div");
   row1.className = "pagerRow";
 
-  const prev = mkBtn("← Prev", container.id + "_prev");
-  const rand = mkBtn("🎲 Random", container.id + "_rand");
+  const prev = mkBtn("← Prev", "pager_prev");
+  const rand = mkBtn("🎲 Random", "pager_rand");
   rand.classList.add("pbtnPrimary");
-  const next = mkBtn("Next →", container.id + "_next");
+  const next = mkBtn("Next →", "pager_next");
 
   prev.disabled = state.page <= 1;
   next.disabled = state.page >= state.totalPages;
@@ -362,11 +451,15 @@ function buildPager(container, state) {
 /* ---------- Main ---------- */
 
 async function main() {
+  wireLightboxOnce();
+
   els.status.textContent = "Loading puzzles.json…";
 
   const BASE = new URL(".", window.location.href).href;
   const puzzlesUrl = BASE + "puzzles.json";
   const impossibleUrl = BASE + "impossible.json";
+
+  const solvedMap = loadSolved();
 
   let puzzlesData;
   try {
@@ -406,10 +499,9 @@ async function main() {
     const pageItems = state.filtered.slice(start, start + PAGE_SIZE);
 
     els.status.textContent = `Showing ${state.filtered.length} results — ${PAGE_SIZE} per page`;
-    renderList(pageItems, impossibleMap);
+    renderList(pageItems, impossibleMap, solvedMap);
 
-    buildPager(els.pagerTop, state);     // ok if null
-    buildPager(els.pagerBottom, state);  // bottom always
+    buildPager(els.pagerBottom, state);
   };
 
   els.q?.addEventListener("input", () => { state.page = 1; state.renderPage(); });
