@@ -506,7 +506,7 @@ async function main() {
     const start = (state.page - 1) * PAGE_SIZE;
     const pageItems = state.filtered.slice(start, start + PAGE_SIZE);
 
-    els.status.textContent = `Showing ${state.filtered.length} results — ${PAGE_SIZE} per page`;
+    els.status.textContent = "";
     renderList(pageItems, impossibleMap, solvedMap);
 
     buildPager(els.pagerBottom, state);
