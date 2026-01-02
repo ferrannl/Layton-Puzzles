@@ -12,22 +12,24 @@ from bs4 import BeautifulSoup, Tag
 OUT_JSON = Path("puzzles.json")
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (compatible; LaytonScraper/2.0; +github-actions)",
+    "User-Agent": "Mozilla/5.0 (compatible; LaytonScraper/3.0; +github-actions)",
     "Accept-Language": "en-US,en;q=0.9",
 }
 
 TIMEOUT = 30
-SLEEP_SECONDS = 1.2
-MAX_PAGES = 800
+SLEEP_SECONDS = 1.1
 
-# Seed pages to discover puzzle links (sidebar/nav)
+# ✅ only scrape a small batch while testing
+MAX_PUZZLES = 30  # set to 20 if you want
+
+# Seed pages to discover puzzle links
 SEEDS = [
     "https://professorlaytonwalkthrough.blogspot.com/2008/02/puzzle001.html",
     "https://professorlaytonwalkthrough.blogspot.com/",
 ]
 
-SECTION_KEYS = ["scene", "puzzle", "hint1", "hint2", "hint3", "solution", "progress"]
-
+# ✅ only keep the sections you want
+SECTION_KEYS = ["puzzle", "hint1", "hint2", "hint3", "solution"]
 
 @dataclass
 class Puzzle:
@@ -35,24 +37,19 @@ class Puzzle:
     title: str
     url: str
     solution_text: str
-    reward_text: str
     images: Dict[str, List[str]]
-
 
 def clean_text(s: str) -> str:
     return re.sub(r"\s+", " ", (s or "")).strip()
 
-
 def is_image_url(src: str) -> bool:
     return bool(src) and ("blogger.googleusercontent.com" in src or "bp.blogspot.com" in src)
-
 
 def detect_section(text: str) -> Optional[str]:
     t = clean_text(text).lower()
     if not t:
         return None
-    if "watch the scene" in t:
-        return "scene"
+    # We only care about these anchors on the page
     if t.startswith("puzzle "):
         return "puzzle"
     if t.startswith("hint 1"):
@@ -63,10 +60,7 @@ def detect_section(text: str) -> Optional[str]:
         return "hint3"
     if t.startswith("solution"):
         return "solution"
-    if t.startswith("progress"):
-        return "progress"
     return None
-
 
 def find_post_container(soup: BeautifulSoup) -> Tag:
     selectors = [
@@ -84,7 +78,6 @@ def find_post_container(soup: BeautifulSoup) -> Tag:
             return el
     return soup.body or soup
 
-
 def extract_title(soup: BeautifulSoup) -> str:
     for tag in ["h3", "h2", "h1"]:
         h = soup.find(tag)
@@ -98,7 +91,6 @@ def extract_title(soup: BeautifulSoup) -> str:
             return t
     return "Untitled"
 
-
 def extract_puzzle_id(title: str, url: str) -> Optional[int]:
     m = re.search(r"\b(\d{3})\b", title)
     if m:
@@ -108,43 +100,27 @@ def extract_puzzle_id(title: str, url: str) -> Optional[int]:
         return int(m.group(1))
     return None
 
-
 def looks_blocked_or_empty(html: str) -> bool:
-    """
-    Heuristics: Blogger sometimes returns consent/blocked pages to CI.
-    If the HTML is tiny or lacks key markers, treat as blocked/empty.
-    """
     if not html or len(html) < 4000:
         return True
     low = html.lower()
-    # Common consent/blocked markers (not exhaustive)
     if "consent" in low and "google" in low and "privacy" in low:
         return True
     if "unusual traffic" in low:
         return True
-    # For this blog, puzzle pages normally contain "Puzzle 0xx" somewhere.
-    if "puzzle 0" not in low and "puzzle&nbsp;0" not in low and "puzzle&nbsp;00" not in low:
-        # Could still be okay (homepage), but for puzzle pages it’s a strong hint.
-        return True
     return False
 
-
 def fetch_with_fallback(session: requests.Session, url: str) -> Tuple[int, str, str]:
-    """
-    Try direct fetch; if it looks blocked/empty, fall back to r.jina.ai proxy.
-    Returns (status_code, html, mode) where mode is "direct" or "proxy".
-    """
     # 1) direct
     try:
         r = session.get(url, headers=HEADERS, timeout=TIMEOUT, allow_redirects=True)
         html = r.text or ""
         if r.status_code == 200 and not looks_blocked_or_empty(html):
             return r.status_code, html, "direct"
-        # If non-200 or looks blocked, try proxy
     except requests.RequestException:
         pass
 
-    # 2) proxy fallback (often works when CI IPs get served “special” pages)
+    # 2) proxy fallback
     proxy_url = "https://r.jina.ai/" + url
     try:
         r2 = session.get(proxy_url, headers=HEADERS, timeout=TIMEOUT, allow_redirects=True)
@@ -152,14 +128,12 @@ def fetch_with_fallback(session: requests.Session, url: str) -> Tuple[int, str, 
     except requests.RequestException as e:
         return 0, f"ERROR: {e}", "error"
 
-
 def discover_puzzle_urls(session: requests.Session) -> List[str]:
     found: Set[str] = set()
 
     for seed in SEEDS:
         code, html, mode = fetch_with_fallback(session, seed)
         print(f"[seed] {seed} -> {code} ({mode})")
-
         if code != 200 or not html:
             continue
 
@@ -171,12 +145,11 @@ def discover_puzzle_urls(session: requests.Session) -> List[str]:
             if re.search(r"/puzzle\d{3}\.html$", href):
                 found.add(href)
 
-        time.sleep(0.3)
+        time.sleep(0.25)
 
     urls = sorted(found)
     print(f"Discovered {len(urls)} puzzle links.")
-    return urls[:MAX_PAGES]
-
+    return urls
 
 def scrape_one(session: requests.Session, url: str) -> Optional[Puzzle]:
     code, html, mode = fetch_with_fallback(session, url)
@@ -197,10 +170,9 @@ def scrape_one(session: requests.Session, url: str) -> Optional[Puzzle]:
     current_section: Optional[str] = None
 
     in_solution = False
-    in_progress = False
     solution_text = ""
-    reward_text = ""
 
+    # IMPORTANT: We DO NOT collect any images until we see "Puzzle xxx" (or hint/solution headers)
     for el in container.find_all(["h1", "h2", "h3", "p", "div", "span", "img"], recursive=True):
         if el.name in ["h1", "h2", "h3", "p", "span", "div"]:
             txt = clean_text(el.get_text(" ", strip=True))
@@ -208,41 +180,44 @@ def scrape_one(session: requests.Session, url: str) -> Optional[Puzzle]:
             if sec:
                 current_section = sec
                 in_solution = (sec == "solution")
-                in_progress = (sec == "progress")
                 continue
 
+            # grab short solution text right after the Solution header
             if in_solution and not solution_text and txt and txt.lower() != "solution":
-                if len(txt) <= 240 and not txt.lower().startswith("hint"):
+                if len(txt) <= 260 and not txt.lower().startswith("hint"):
                     solution_text = txt
-
-            if in_progress and not reward_text and txt and txt.lower() != "progress":
-                if len(txt) <= 280 and any(k in txt.lower() for k in ["picar", "hint", "coin"]):
-                    reward_text = txt
 
         if el.name == "img":
             src = el.get("src") or ""
             if not is_image_url(src):
                 continue
-            if not current_section:
-                current_section = "puzzle"
+
+            # ✅ skip any images above "Puzzle xxx"
+            if current_section is None:
+                continue
+
+            # ✅ only keep allowed sections
+            if current_section not in images:
+                continue
+
             if src not in images[current_section]:
                 images[current_section].append(src)
 
+    # If a page somehow has zero puzzle/hint/solution images, you can still keep it,
+    # but usually you want at least puzzle images.
     return Puzzle(
         id=pid,
         title=title,
         url=url,
         solution_text=solution_text,
-        reward_text=reward_text,
         images=images,
     )
-
 
 def main():
     with requests.Session() as session:
         urls = discover_puzzle_urls(session)
 
-        # Fallback if discovery finds nothing
+        # fallback sequential if discovery fails
         if not urls:
             print("No links discovered; fallback sequential 001..200")
             urls = [
@@ -252,17 +227,20 @@ def main():
 
         puzzles: List[Puzzle] = []
         for url in urls:
+            if len(puzzles) >= MAX_PUZZLES:
+                break
+
             p = scrape_one(session, url)
             if p:
                 puzzles.append(p)
                 img_count = sum(len(v) for v in p.images.values())
                 print(f"  + OK #{p.id:03d} imgs={img_count}")
+
             time.sleep(SLEEP_SECONDS)
 
     puzzles = sorted(puzzles, key=lambda x: x.id)
 
     payload = {
-        "source": "professorlaytonwalkthrough.blogspot.com",
         "generated_at_unix": int(time.time()),
         "count": len(puzzles),
         "puzzles": [asdict(p) for p in puzzles],
@@ -272,8 +250,7 @@ def main():
     print(f"\nWrote {len(puzzles)} puzzles to {OUT_JSON}")
 
     if len(puzzles) == 0:
-        print("WARNING: Still 0 puzzles scraped. This indicates network/HTML blocking even via proxy.")
-
+        print("WARNING: 0 puzzles scraped. Likely blocked HTML even via proxy.")
 
 if __name__ == "__main__":
     main()
