@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="./index.html">
+  <a href="https://ferrannl.github.io/Layton-Puzzles/">
     <img src="./logo.gif" alt="Professor Layton Puzzles" />
   </a>
 </p>
