@@ -16,12 +16,22 @@ function pad3(n){ return String(n).padStart(3, "0"); }
 
 function sanitizeTitle(t, pid) {
   if (!t) return `Puzzle ${pad3(pid)}`;
+
   let s = String(t).trim();
-  s = s.replace(/^\s*puzzle\s*\d{1,3}\s*[-:–—]?\s*/i, "");
-  s = s.replace(/^\s*\d{1,3}\s*[-:–—]\s*/i, "");
+
+  // Remove "Puzzle 003", "Puzzle 003 -", etc.
+  s = s.replace(/^\s*puzzle\s*\d{3}\s*[-:–—]?\s*/i, "");
+
+  // Remove "003 -", "003 –", etc.
+  s = s.replace(/^\s*\d{3}\s*[-:–—]\s*/i, "");
+
+  // ✅ Remove plain "003 " (digits + space)
+  s = s.replace(/^\s*\d{3}\s+/i, "");
+
   s = s.trim();
   return s || `Puzzle ${pad3(pid)}`;
 }
+
 
 function makeImg(src) {
   const wrap = document.createElement("div");
@@ -161,6 +171,9 @@ function renderList(puzzlesPage, impossibleMap) {
       row.appendChild(h2d);
       row.appendChild(h3d);
       section.appendChild(row);
+      
+  // 👇 ADD THIS
+  section.appendChild(document.createElement("br"));
     }
 
     // SOLUTION
