@@ -4,41 +4,95 @@
   </a>
 </p>
 
-# Professor Layton – Puzzle Archive
+<h1 align="center">🧠 Professor Layton – Puzzle Archive</h1>
 
-A lightweight, static web archive for **Professor Layton puzzles**, focused on **clarity, accuracy, and playability**.
+<p align="center">
+  <strong>A clean, faithful archive of Professor Layton puzzles.</strong><br>
+  Focused on logic, clarity, and actually solving the puzzles.
+</p>
 
-This project contains puzzle pages (Puzzle 001 → 100+) and presents them in a clean interface where you can:
-
-- View **Puzzle images**
-- Reveal **Hints one-by-one** (Hint 2 unlocks after Hint 1, etc.)
-- View the **Solution**
-- Search puzzles by number or title
-- Jump to a **Random Puzzle**
-- Automatically flag **impossible / broken puzzles**
-
-No accounts, no tracking, no backend — just static files.
+<p align="center">
+  <a href="https://ferrannl.github.io/Layton-Puzzles/">🌍 Live Demo</a>
+</p>
 
 ---
 
-## Features
+## ✨ What is this?
 
-- ✅ **Only relevant content**
-  - Puzzle images
-  - Hint 1 / Hint 2 / Hint 3
-  - Solution  
-  *(Progress / reward content is intentionally ignored)*
+**Professor Layton – Puzzle Archive** is a lightweight, static web archive containing  
+the puzzles from the *Professor Layton* series — presented in a way that is:
 
-- 🧩 **Sequential hints**
-  - Hints unlock in order, just like the games
+- Clear
+- Accurate
+- Free from fluff
+- Actually playable with the provided assets
 
-- 🎲 **Random Puzzle**
-  - Instantly jump to a random puzzle to play without browsing
+Each puzzle page focuses **only on what matters**:
+the puzzle itself, its hints, and its solution.
 
-- 🚫 **Impossible puzzles (auto-updating)**
-  - The repo maintains an **auto-updating list** of puzzles that are known to be **broken, incorrect, or not realistically solvable** with the available assets.
-  - The UI shows an **“Impossible”** badge when a puzzle is in that list.
-  - The list is designed to scale (001 → 100+) and can be updated automatically (e.g., via a small script / workflow) without manual editing of the UI code.
+No accounts.  
+No ads.  
+No backend.  
+
+Just puzzles.
+
+Made with ❤️ by **Ferran**
+
+---
+
+## 🧩 What you can do
+
+- 🖼️ View the **original puzzle images**
+- 🔓 Reveal **hints one-by-one**, in the intended order
+- ✅ View the **solution** (images and/or text)
+- 🔍 **Search** by puzzle number, title, or content
+- 🎲 Jump to a **Random Puzzle**
+- 🚫 Instantly see which puzzles are **impossible / broken**
+
+Everything runs client-side using static files.
+
+---
+
+## 🚀 Features
+
+### ✅ Only relevant content
+- Puzzle images
+- Hint 1 / Hint 2 / Hint 3
+- Solution  
+
+*(Progress scenes, rewards, and story fluff are intentionally excluded)*
+
+### 🧩 Sequential hints
+Hints unlock in order —  
+**Hint 2 only becomes available after Hint 1**, just like in the games.
+
+### 🎲 Random Puzzle
+Instantly jump to a random puzzle without browsing pages.
+
+Perfect for:
+- “Give me one to solve”
+- Casual replay
+- Testing logic skills
+
+### 🔍 Search & navigation
+- Search by puzzle number (`#025`)
+- Search by title or text
+- Clean pagination with progress indicator
+
+### 🚫 Impossible puzzles (auto-updating)
+Some puzzles **cannot be solved correctly** with the available assets alone  
+(e.g. they require physical interaction, motion, or missing context).
+
+These are automatically flagged:
+
+- Marked visually in the UI
+- Explained via tooltip
+- Maintained in a central list
+- Updated without touching UI code
+
+---
+
+## 🚫 Impossible / Infeasible puzzles
 
 <!-- IMPOSSIBLE:START -->
 
@@ -51,27 +105,27 @@ Known broken / unsolvable puzzles are flagged in the UI:
 
 <!-- IMPOSSIBLE:END -->
 
-
 ---
 
-## Project Structure
+## 🗂️ Project Structure
 
 ```text
 /
 ├── index.html        # Main UI
 ├── style.css         # Layton-style theme
-├── script.js         # Rendering, search, hint logic + random puzzle
-├── scrape.py         # Puzzle scraper
+├── script.js         # Rendering, search, hint logic, pagination, random jump
+├── scrape.py         # Puzzle scraper (Blogspot → JSON)
 ├── puzzles.json      # Generated puzzle data
-├── logo.gif          # Project logo (used in README + site)
+├── impossible.json   # Map of broken / infeasible puzzles
+├── logo.gif          # Project logo
 └── README.md
 ````
 
 ---
 
-## Scraping Logic (Important)
+## 🧠 Scraping Logic (Important)
 
-The scraper is intentionally strict.
+The scraper is intentionally **strict and conservative**.
 
 It **only collects images that appear under**:
 
@@ -81,29 +135,32 @@ It **only collects images that appear under**:
 * `Hint 3`
 * `Solution`
 
-Anything **before** the puzzle header or **after the “Progress” section** is ignored.
+Anything **before the puzzle header** or
+**after the “Progress” section** is ignored.
 
 This avoids:
 
-* Scene fluff
-* Progress/reward images
+* Scene/story fluff
+* Reward screens
 * UI junk not relevant to solving puzzles
+
+The goal is **accuracy over completeness**.
 
 ---
 
-## How to Run the Scraper
+## ▶️ How to run the scraper
 
 ```bash
 python scrape.py
 ```
 
-This generates / updates:
+This generates or updates:
 
 ```text
 puzzles.json
 ```
 
-You can adjust the limit in `scrape.py`:
+You can limit how many puzzles are scraped by editing:
 
 ```python
 MAX_PUZZLES = 30
@@ -111,15 +168,51 @@ MAX_PUZZLES = 30
 
 ---
 
-## Viewing the Site
+## 🌍 Viewing the site
 
-Open locally:
+### Local
+
+Just open:
 
 ```text
 index.html
 ```
 
-Or host it via **GitHub Pages** (static, no build step required).
+(No build step required)
 
-```
-```
+### GitHub Pages
+
+This project is designed to work perfectly as a **static GitHub Pages site**.
+
+Once pushed, it’s live immediately.
+
+---
+
+## 🧠 Design philosophy
+
+* Static-first
+* No JavaScript frameworks
+* No server dependencies
+* Minimal UI chrome
+* Respect the original puzzle flow
+
+If a puzzle **cannot be solved fairly**, it is marked — not hidden.
+
+---
+
+## 🧑‍💻 Credits & notes
+
+* Puzzle content © Level-5
+* This project is **non-commercial** and purely archival / educational
+* Built with vanilla **HTML, CSS & JS**
+
+---
+
+## 🔗 Links
+
+* 🌍 Live demo: [https://ferrannl.github.io/Layton-Puzzles/](https://ferrannl.github.io/Layton-Puzzles/)
+* 🧠 Source code: [https://github.com/ferrannl/Layton-Puzzles](https://github.com/ferrannl/Layton-Puzzles)
+
+---
+
+🧩 Enjoy solving — and remember: A true gentleman leaves no puzzle unsolved!
