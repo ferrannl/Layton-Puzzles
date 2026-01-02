@@ -10,19 +10,17 @@
   <header class="topbar">
     <div class="wrap">
       <h1>Puzzle Index</h1>
-      <p class="sub">
-        Search, open a puzzle, then expand hints/solution/progress.
-      </p>
+      <p class="sub">Search, open a puzzle, then reveal hints one-by-one and view the solution.</p>
 
       <div class="controls">
-        <input id="q" type="search" placeholder="Search by #, title, US/UK… e.g. 63, village, picarats" />
+        <input id="q" type="search" placeholder="Search by # or title… e.g. 63, village, picarats" />
         <label class="chk">
           <input id="toggleAllSolutions" type="checkbox" />
           Auto-open Solutions
         </label>
         <label class="chk">
-          <input id="toggleAllHints" type="checkbox" />
-          Auto-open Hints
+          <input id="toggleAutoHint1" type="checkbox" />
+          Auto-open Hint 1
         </label>
       </div>
     </div>
@@ -32,12 +30,6 @@
     <div id="status" class="status">Loading puzzles…</div>
     <div id="list" class="list"></div>
   </main>
-
-  <footer class="wrap footer">
-    <small>
-      Data scraped from the original game(s). Consider linking back to sources.
-    </small>
-  </footer>
 
   <script src="script.js"></script>
 </body>
