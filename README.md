@@ -8,7 +8,7 @@
 
 A lightweight, static web archive for **Professor Layton puzzles**, focused on **clarity, accuracy, and playability**.
 
-This project scrapes puzzle pages from the original walkthrough blog (Puzzle 001 → 100+) and presents them in a clean interface where you can:
+This project contains puzzle pages (Puzzle 001 → 100+) and presents them in a clean interface where you can:
 
 - View **Puzzle images**
 - Reveal **Hints one-by-one** (Hint 2 unlocks after Hint 1, etc.)
