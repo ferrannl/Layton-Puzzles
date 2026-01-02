@@ -2,13 +2,14 @@ const $ = (sel) => document.querySelector(sel);
 
 const PAGE_SIZE = 10;
 
+// NOTE: pagerTop may not exist (you removed it). That's fine.
 const els = {
   q: $("#q"),
   status: $("#status"),
   list: $("#list"),
   toggleAllSolutions: $("#toggleAllSolutions"),
-  pagerTop: $("#pagerTop"),
-  pagerBottom: $("#pagerBottom"),
+  pagerTop: $("#pagerTop"),       // can be null
+  pagerBottom: $("#pagerBottom"), // should exist
 };
 
 function pad3(n){ return String(n).padStart(3, "0"); }
@@ -204,27 +205,20 @@ function scrollToTop() {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-function flashElement(el) {
-  const old = el.style.boxShadow;
-  el.style.boxShadow = "0 0 0 3px rgba(234,158,68,.35), 0 18px 30px rgba(0,0,0,.25)";
-  setTimeout(() => { el.style.boxShadow = old; }, 550);
-}
-
 function jumpToPuzzle(pid) {
   const el = document.querySelector(`details.puzzle[data-pid="${pid}"]`);
   if (!el) return false;
   el.open = true;
   el.scrollIntoView({ behavior: "smooth", block: "start" });
-  flashElement(el);
   return true;
 }
 
-/* ---------- Fancy pager ---------- */
+/* ---------- Pager ---------- */
 
-function mkBtn(label, id, primary=false) {
+function mkBtn(label, id) {
   const b = document.createElement("button");
   b.type = "button";
-  b.className = "pbtn" + (primary ? " pbtnPrimary" : "");
+  b.className = "pbtn";
   b.id = id;
   b.textContent = label;
   return b;
@@ -247,77 +241,65 @@ function mkDots() {
 }
 
 function buildPager(container, state) {
+  // ✅ critical: do nothing if pager not present
+  if (!container) return;
+
   container.innerHTML = "";
 
-  const left = document.createElement("div");
-  left.className = "pagerLeft";
-
-  const right = document.createElement("div");
-  right.className = "pagerRight";
-
-  const nums = document.createElement("div");
-  nums.className = "pagerNums";
+  const row1 = document.createElement("div");
+  row1.className = "pagerRow";
 
   const prev = mkBtn("← Prev", container.id + "_prev");
+  const rand = mkBtn("🎲 Random", container.id + "_rand");
+  rand.classList.add("pbtnPrimary");
   const next = mkBtn("Next →", container.id + "_next");
-  const rand = mkBtn("🎲 Random", container.id + "_rand", true);
 
-  // disable
   prev.disabled = state.page <= 1;
   next.disabled = state.page >= state.totalPages;
 
-  left.appendChild(prev);
+  row1.appendChild(prev);
+  row1.appendChild(rand);
+  row1.appendChild(next);
 
-  // page numbers window
+  const row2 = document.createElement("div");
+  row2.className = "pagerNums";
+
   const total = state.totalPages;
   const page = state.page;
 
-  const windowSize = 2; // show current ±2
+  const windowSize = 2;
   const start = clamp(page - windowSize, 1, total);
-  const end = clamp(page + windowSize, 1, total);
+  const end   = clamp(page + windowSize, 1, total);
 
-  // Always show 1
-  nums.appendChild(mkNumBtn(1, page === 1));
-
-  if (start > 2) nums.appendChild(mkDots());
+  row2.appendChild(mkNumBtn(1, page === 1));
+  if (start > 2) row2.appendChild(mkDots());
 
   for (let p = Math.max(2, start); p <= Math.min(total - 1, end); p++) {
-    nums.appendChild(mkNumBtn(p, p === page));
+    row2.appendChild(mkNumBtn(p, p === page));
   }
 
-  if (end < total - 1) nums.appendChild(mkDots());
+  if (end < total - 1) row2.appendChild(mkDots());
+  if (total > 1) row2.appendChild(mkNumBtn(total, page === total));
 
-  // Always show last if >1
-  if (total > 1) nums.appendChild(mkNumBtn(total, page === total));
-
-  right.appendChild(rand);
-  right.appendChild(next);
-
-  container.appendChild(left);
-  container.appendChild(nums);
-  container.appendChild(right);
-
-  // progress block
-  const prog = document.createElement("div");
-  prog.className = "pagerProgress";
-  prog.innerHTML = `
-    <div style="display:flex;gap:10px;align-items:center;">
-      <div class="pagerTrack" aria-hidden="true">
-        <div class="pagerPill" id="${container.id}_pill"></div>
-      </div>
-      <div class="pagerLabel" id="${container.id}_label"></div>
+  const row3 = document.createElement("div");
+  row3.className = "pagerProgress";
+  row3.innerHTML = `
+    <div class="pagerTrack" aria-hidden="true">
+      <div class="pagerPill" id="${container.id}_pill"></div>
     </div>
+    <div class="pagerLabel" id="${container.id}_label"></div>
   `;
-  container.appendChild(prog);
 
-  // set pill + label
+  container.appendChild(row1);
+  container.appendChild(row2);
+  container.appendChild(row3);
+
   const label = $("#" + container.id + "_label");
   const pill = $("#" + container.id + "_pill");
 
-  label.textContent = `Page ${page} / ${total} • ${PAGE_SIZE}/page`;
+  label.textContent = `Page ${page} / ${total} • ${PAGE_SIZE} per page`;
 
   const frac = total <= 1 ? 0 : (page - 1) / (total - 1);
-  // pill moves across track using translateX percentage
   pill.style.transform = `translateX(${Math.round(frac * 100)}%)`;
 
   // events
@@ -331,6 +313,7 @@ function buildPager(container, state) {
 
   rand.addEventListener("click", () => {
     if (!state.filtered.length) return;
+
     const pick = state.filtered[Math.floor(Math.random() * state.filtered.length)];
     const idx = state.filtered.findIndex(p => p.id === pick.id);
     const targetPage = clamp(Math.floor(idx / PAGE_SIZE) + 1, 1, state.totalPages);
@@ -400,6 +383,7 @@ async function main() {
     els.status.textContent = `Showing ${state.filtered.length} results — ${PAGE_SIZE} per page`;
     renderList(pageItems, impossibleMap);
 
+    // ✅ build whichever exists
     buildPager(els.pagerTop, state);
     buildPager(els.pagerBottom, state);
   };
