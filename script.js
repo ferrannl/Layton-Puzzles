@@ -32,12 +32,12 @@ function sanitizeTitle(t, pid) {
   return s || `Puzzle ${pad3(pid)}`;
 }
 
-function makeImg(src) {
+function makeImg(src, opts = {}) {
   const wrap = document.createElement("div");
   wrap.className = "thumb";
 
   const img = document.createElement("img");
-  img.className = "pimg";
+  img.className = "pimg" + (opts.cropTop ? " cropTop" : "");
   img.loading = "lazy";
   img.referrerPolicy = "no-referrer";
   img.src = src;
@@ -46,16 +46,22 @@ function makeImg(src) {
   return wrap;
 }
 
-function sectionGrid(urls) {
+function sectionGrid(urls, opts = {}) {
   const grid = document.createElement("div");
   grid.className = "grid";
-  (urls || []).forEach((u) => grid.appendChild(makeImg(u)));
+
+  (urls || []).forEach((u, idx) => {
+    // Only crop the FIRST image in the PUZZLE question section
+    const cropTop = !!opts.cropFirst && idx === 0;
+    grid.appendChild(makeImg(u, { cropTop }));
+  });
+
   return grid;
 }
 
-function subDetails(title, openByDefault = false) {
+function subDetails(title, openByDefault = false, extraClass = "") {
   const d = document.createElement("details");
-  d.className = "subdetails";
+  d.className = "subdetails" + (extraClass ? " " + extraClass : "");
   if (openByDefault) d.open = true;
 
   const s = document.createElement("summary");
@@ -124,13 +130,13 @@ function renderList(puzzlesPage, impossibleMap) {
     const section = document.createElement("div");
     section.className = "section";
 
-    // PUZZLE IMAGES (no heading)
+    // PUZZLE IMAGES (crop FIRST image by 50px from top)
     const puzzleImgs = p.images?.puzzle || [];
     if (puzzleImgs.length) {
-      section.appendChild(sectionGrid(puzzleImgs));
+      section.appendChild(sectionGrid(puzzleImgs, { cropFirst: true }));
     }
 
-    // HINTS row (no heading)
+    // HINTS row
     const hint1 = p.images?.hint1 || [];
     const hint2 = p.images?.hint2 || [];
     const hint3 = p.images?.hint3 || [];
@@ -140,15 +146,15 @@ function renderList(puzzlesPage, impossibleMap) {
       const row = document.createElement("div");
       row.className = "hintsRow";
 
-      const { d: h1d, inner: h1i } = subDetails("Hint 1", false);
+      const { d: h1d, inner: h1i } = subDetails("Hint 1", false, "hint1");
       if (hint1.length) h1i.appendChild(sectionGrid(hint1));
       else h1i.appendChild(Object.assign(document.createElement("div"), { className:"textline", textContent:"(no images)" }));
 
-      const { d: h2d, inner: h2i } = subDetails("Hint 2", false);
+      const { d: h2d, inner: h2i } = subDetails("Hint 2", false, "hint2");
       if (hint2.length) h2i.appendChild(sectionGrid(hint2));
       else h2i.appendChild(Object.assign(document.createElement("div"), { className:"textline", textContent:"(no images)" }));
 
-      const { d: h3d, inner: h3i } = subDetails("Hint 3", false);
+      const { d: h3d, inner: h3i } = subDetails("Hint 3", false, "hint3");
       if (hint3.length) h3i.appendChild(sectionGrid(hint3));
       else h3i.appendChild(Object.assign(document.createElement("div"), { className:"textline", textContent:"(no images)" }));
 
@@ -172,7 +178,7 @@ function renderList(puzzlesPage, impossibleMap) {
     // SOLUTION
     const solImgs = p.images?.solution || [];
     if (solImgs.length || p.solution_text) {
-      const { d: sd, inner } = subDetails("Solution", !!openSol);
+      const { d: sd, inner } = subDetails("Solution", !!openSol, "solutionBox");
 
       if (p.solution_text) {
         const t = document.createElement("div");
