@@ -31,7 +31,7 @@ const THEME_KEY = "layton_theme_v1";
 
 function getTheme() {
   const saved = localStorage.getItem(THEME_KEY);
-  return (saved === "light" || saved === "dark") ? saved : "dark";
+  return (saved === "light" || saved === "dark") ? saved : "light";
 }
 
 function setTheme(theme) {
