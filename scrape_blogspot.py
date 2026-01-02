@@ -12,7 +12,7 @@ from bs4 import BeautifulSoup, Tag
 OUT_JSON = Path("puzzles.json")
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (compatible; LaytonScraper/3.0; +github-actions)",
+    "User-Agent": "Mozilla/5.0 (compatible; LaytonScraper/3.1; +github-actions)",
     "Accept-Language": "en-US,en;q=0.9",
 }
 
@@ -20,15 +20,14 @@ TIMEOUT = 30
 SLEEP_SECONDS = 1.1
 
 # ✅ only scrape a small batch while testing
-MAX_PUZZLES = 30  # set to 20 if you want
+MAX_PUZZLES = 30
 
-# Seed pages to discover puzzle links
 SEEDS = [
     "https://professorlaytonwalkthrough.blogspot.com/2008/02/puzzle001.html",
     "https://professorlaytonwalkthrough.blogspot.com/",
 ]
 
-# ✅ only keep the sections you want
+# ✅ only sections you want
 SECTION_KEYS = ["puzzle", "hint1", "hint2", "hint3", "solution"]
 
 @dataclass
@@ -46,10 +45,17 @@ def is_image_url(src: str) -> bool:
     return bool(src) and ("blogger.googleusercontent.com" in src or "bp.blogspot.com" in src)
 
 def detect_section(text: str) -> Optional[str]:
+    """
+    Returns one of:
+      - puzzle/hint1/hint2/hint3/solution  => start collecting under that section
+      - __STOP__                          => stop collecting any further images (Progress area)
+      - None                              => no change
+    """
     t = clean_text(text).lower()
     if not t:
         return None
-    # We only care about these anchors on the page
+
+    # Main anchors
     if t.startswith("puzzle "):
         return "puzzle"
     if t.startswith("hint 1"):
@@ -60,6 +66,12 @@ def detect_section(text: str) -> Optional[str]:
         return "hint3"
     if t.startswith("solution"):
         return "solution"
+
+    # ✅ Progress section: everything after is useless
+    # Blog sometimes uses "Progress" text; we treat it as end-of-useful-content.
+    if t.startswith("progress"):
+        return "__STOP__"
+
     return None
 
 def find_post_container(soup: BeautifulSoup) -> Tag:
@@ -168,43 +180,46 @@ def scrape_one(session: requests.Session, url: str) -> Optional[Puzzle]:
 
     images: Dict[str, List[str]] = {k: [] for k in SECTION_KEYS}
     current_section: Optional[str] = None
+    stop_collecting = False
 
     in_solution = False
     solution_text = ""
 
-    # IMPORTANT: We DO NOT collect any images until we see "Puzzle xxx" (or hint/solution headers)
+    # We do NOT collect any images until we see "Puzzle xxx"/"Hint"/"Solution".
     for el in container.find_all(["h1", "h2", "h3", "p", "div", "span", "img"], recursive=True):
         if el.name in ["h1", "h2", "h3", "p", "span", "div"]:
             txt = clean_text(el.get_text(" ", strip=True))
             sec = detect_section(txt)
-            if sec:
+            if sec == "__STOP__":
+                stop_collecting = True
+                current_section = None
+                in_solution = False
+                continue
+            if sec in SECTION_KEYS:
                 current_section = sec
                 in_solution = (sec == "solution")
                 continue
 
-            # grab short solution text right after the Solution header
+            # short solution text right after Solution header
             if in_solution and not solution_text and txt and txt.lower() != "solution":
                 if len(txt) <= 260 and not txt.lower().startswith("hint"):
                     solution_text = txt
 
         if el.name == "img":
+            if stop_collecting:
+                continue
+
             src = el.get("src") or ""
             if not is_image_url(src):
                 continue
 
-            # ✅ skip any images above "Puzzle xxx"
+            # skip any images above Puzzle/Hint/Solution
             if current_section is None:
-                continue
-
-            # ✅ only keep allowed sections
-            if current_section not in images:
                 continue
 
             if src not in images[current_section]:
                 images[current_section].append(src)
 
-    # If a page somehow has zero puzzle/hint/solution images, you can still keep it,
-    # but usually you want at least puzzle images.
     return Puzzle(
         id=pid,
         title=title,
