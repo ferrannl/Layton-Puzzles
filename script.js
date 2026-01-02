@@ -2,23 +2,22 @@ const $ = (sel) => document.querySelector(sel);
 
 const PAGE_SIZE = 10;
 
-function pad3(n) {
-  return String(n).padStart(3, "0");
-}
+const els = {
+  q: $("#q"),
+  status: $("#status"),
+  list: $("#list"),
+  toggleAllSolutions: $("#toggleAllSolutions"),
+  pagerTop: $("#pagerTop"),
+  pagerBottom: $("#pagerBottom"),
+};
+
+function pad3(n){ return String(n).padStart(3, "0"); }
 
 function sanitizeTitle(t, pid) {
-  // Remove duplicate numbering like "Puzzle 006 - Light Weight" or "006 - Light Weight"
   if (!t) return `Puzzle ${pad3(pid)}`;
-
   let s = String(t).trim();
-
-  // Remove "Puzzle 006" prefix variants
   s = s.replace(/^\s*puzzle\s*\d{1,3}\s*[-:–—]?\s*/i, "");
-
-  // Remove "006" prefix variants
   s = s.replace(/^\s*\d{1,3}\s*[-:–—]\s*/i, "");
-
-  // If it becomes empty, fall back
   s = s.trim();
   return s || `Puzzle ${pad3(pid)}`;
 }
@@ -78,10 +77,8 @@ function matchesQuery(p, q, impossibleMap) {
 }
 
 function renderList(puzzlesPage, impossibleMap) {
-  const list = $("#list");
-  list.innerHTML = "";
-
-  const openSol = $("#toggleAllSolutions")?.checked;
+  els.list.innerHTML = "";
+  const openSol = els.toggleAllSolutions?.checked;
 
   for (const p of puzzlesPage) {
     const d = document.createElement("details");
@@ -101,7 +98,6 @@ function renderList(puzzlesPage, impossibleMap) {
     const meta = document.createElement("span");
     meta.className = "meta";
 
-    // impossible marker (from impossible.json)
     const impossibleName = impossibleMap?.[p.id];
     if (impossibleName) {
       const imp = document.createElement("span");
@@ -127,7 +123,7 @@ function renderList(puzzlesPage, impossibleMap) {
       section.appendChild(sectionGrid(puzzleImgs));
     }
 
-    // HINTS (left-to-right row) + sequential unlock
+    // HINTS row (left -> right)
     const hint1 = p.images?.hint1 || [];
     const hint2 = p.images?.hint2 || [];
     const hint3 = p.images?.hint3 || [];
@@ -143,35 +139,19 @@ function renderList(puzzlesPage, impossibleMap) {
 
       const { d: h1d, inner: h1i } = subDetails("Hint 1", false);
       if (hint1.length) h1i.appendChild(sectionGrid(hint1));
-      else {
-        const t = document.createElement("div");
-        t.className = "textline";
-        t.textContent = "(no images)";
-        h1i.appendChild(t);
-      }
+      else h1i.appendChild(Object.assign(document.createElement("div"), { className:"textline", textContent:"(no images)" }));
 
       const { d: h2d, inner: h2i } = subDetails("Hint 2", false);
       if (hint2.length) h2i.appendChild(sectionGrid(hint2));
-      else {
-        const t = document.createElement("div");
-        t.className = "textline";
-        t.textContent = "(no images)";
-        h2i.appendChild(t);
-      }
+      else h2i.appendChild(Object.assign(document.createElement("div"), { className:"textline", textContent:"(no images)" }));
 
       const { d: h3d, inner: h3i } = subDetails("Hint 3", false);
       if (hint3.length) h3i.appendChild(sectionGrid(hint3));
-      else {
-        const t = document.createElement("div");
-        t.className = "textline";
-        t.textContent = "(no images)";
-        h3i.appendChild(t);
-      }
+      else h3i.appendChild(Object.assign(document.createElement("div"), { className:"textline", textContent:"(no images)" }));
 
-      // Lock 2 + 3 until previous opened
+      // sequential lock
       h2d.classList.add("locked");
       h3d.classList.add("locked");
-
       const unlock = (det) => det.classList.remove("locked");
       h1d.addEventListener("toggle", () => { if (h1d.open) unlock(h2d); });
       h2d.addEventListener("toggle", () => { if (h2d.open) unlock(h3d); });
@@ -199,7 +179,7 @@ function renderList(puzzlesPage, impossibleMap) {
 
     d.appendChild(s);
     d.appendChild(section);
-    list.appendChild(d);
+    els.list.appendChild(d);
   }
 }
 
@@ -218,21 +198,16 @@ function normalizeImpossible(raw) {
   return map;
 }
 
+function clamp(n, lo, hi){ return Math.max(lo, Math.min(hi, n)); }
+
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
 function flashElement(el) {
-  const oldOutline = el.style.outline;
-  const oldOutlineOffset = el.style.outlineOffset;
-  const oldTransition = el.style.transition;
-
-  el.style.transition = "outline 120ms ease";
-  el.style.outline = "3px solid rgba(234,158,68,.95)";
-  el.style.outlineOffset = "4px";
-
-  setTimeout(() => { el.style.outline = "3px solid rgba(234,158,68,.0)"; }, 220);
-  setTimeout(() => {
-    el.style.outline = oldOutline;
-    el.style.outlineOffset = oldOutlineOffset;
-    el.style.transition = oldTransition;
-  }, 520);
+  const old = el.style.boxShadow;
+  el.style.boxShadow = "0 0 0 3px rgba(234,158,68,.35), 0 18px 30px rgba(0,0,0,.25)";
+  setTimeout(() => { el.style.boxShadow = old; }, 550);
 }
 
 function jumpToPuzzle(pid) {
@@ -244,33 +219,134 @@ function jumpToPuzzle(pid) {
   return true;
 }
 
-function clamp(n, lo, hi) {
-  return Math.max(lo, Math.min(hi, n));
+/* ---------- Fancy pager (top + bottom) ---------- */
+
+function mkBtn(label, id) {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = "pbtn";
+  b.id = id;
+  b.textContent = label;
+  return b;
 }
 
-function setPagerUI(page, totalPages) {
-  const info = $("#pageInfo");
-  const info2 = $("#pageInfo2");
-  if (info) info.textContent = `Page ${page} / ${totalPages}`;
-  if (info2) info2.textContent = `Page ${page} / ${totalPages}`;
-
-  const prev = $("#prevPage");
-  const next = $("#nextPage");
-  const prev2 = $("#prevPage2");
-  const next2 = $("#nextPage2");
-
-  const atStart = page <= 1;
-  const atEnd = page >= totalPages;
-
-  if (prev) prev.disabled = atStart;
-  if (prev2) prev2.disabled = atStart;
-  if (next) next.disabled = atEnd;
-  if (next2) next2.disabled = atEnd;
+function mkNumBtn(n, active=false) {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = "pbtn pnum" + (active ? " pnumActive" : "");
+  b.textContent = String(n);
+  b.dataset.page = String(n);
+  return b;
 }
+
+function mkDots() {
+  const d = document.createElement("span");
+  d.className = "pnumDots";
+  d.textContent = "…";
+  return d;
+}
+
+function buildPager(container, state) {
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  // Row 1: Prev / Random / Next (always visible)
+  const row1 = document.createElement("div");
+  row1.className = "pagerRow";
+
+  const prev = mkBtn("← Prev", container.id + "_prev");
+  const rand = mkBtn("🎲 Random", container.id + "_rand");
+  rand.classList.add("pbtnPrimary");
+  const next = mkBtn("Next →", container.id + "_next");
+
+  prev.disabled = state.page <= 1;
+  next.disabled = state.page >= state.totalPages;
+
+  row1.appendChild(prev);
+  row1.appendChild(rand);
+  row1.appendChild(next);
+
+  // Row 2: Page numbers (index strip)
+  const row2 = document.createElement("div");
+  row2.className = "pagerNums";
+
+  const total = state.totalPages;
+  const page = state.page;
+
+  // show: 1 … (page-2..page+2) … last
+  const windowSize = 2;
+  const start = clamp(page - windowSize, 1, total);
+  const end   = clamp(page + windowSize, 1, total);
+
+  row2.appendChild(mkNumBtn(1, page === 1));
+  if (start > 2) row2.appendChild(mkDots());
+
+  for (let p = Math.max(2, start); p <= Math.min(total - 1, end); p++) {
+    row2.appendChild(mkNumBtn(p, p === page));
+  }
+
+  if (end < total - 1) row2.appendChild(mkDots());
+  if (total > 1) row2.appendChild(mkNumBtn(total, page === total));
+
+  // Row 3: Progress track
+  const row3 = document.createElement("div");
+  row3.className = "pagerProgress";
+  row3.innerHTML = `
+    <div class="pagerTrack" aria-hidden="true">
+      <div class="pagerPill" id="${container.id}_pill"></div>
+    </div>
+    <div class="pagerLabel" id="${container.id}_label"></div>
+  `;
+
+  container.appendChild(row1);
+  container.appendChild(row2);
+  container.appendChild(row3);
+
+  // pill + label
+  const label = $("#" + container.id + "_label");
+  const pill = $("#" + container.id + "_pill");
+  label.textContent = `Page ${page} / ${total} • ${PAGE_SIZE} per page`;
+
+  const frac = total <= 1 ? 0 : (page - 1) / (total - 1);
+  pill.style.transform = `translateX(${Math.round(frac * 100)}%)`;
+
+  // events
+  prev.addEventListener("click", () => {
+    if (state.page > 1) { state.page--; state.renderPage(); scrollToTop(); }
+  });
+
+  next.addEventListener("click", () => {
+    if (state.page < state.totalPages) { state.page++; state.renderPage(); scrollToTop(); }
+  });
+
+  rand.addEventListener("click", () => {
+    if (!state.filtered.length) return;
+
+    const pick = state.filtered[Math.floor(Math.random() * state.filtered.length)];
+    const idx = state.filtered.findIndex(p => p.id === pick.id);
+    const targetPage = clamp(Math.floor(idx / PAGE_SIZE) + 1, 1, state.totalPages);
+
+    state.page = targetPage;
+    state.renderPage();
+    jumpToPuzzle(pick.id);
+  });
+
+  container.querySelectorAll("button[data-page]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const p = Number(btn.dataset.page);
+      if (!Number.isFinite(p)) return;
+      state.page = p;
+      state.renderPage();
+      scrollToTop();
+    });
+  });
+}
+
+/* ---------- Main ---------- */
 
 async function main() {
-  const status = $("#status");
-  status.textContent = "Loading puzzles.json…";
+  els.status.textContent = "Loading puzzles.json…";
 
   const BASE = new URL(".", window.location.href).href;
   const puzzlesUrl = BASE + "puzzles.json";
@@ -280,8 +356,7 @@ async function main() {
   try {
     puzzlesData = await fetchJson(puzzlesUrl);
   } catch (e) {
-    status.textContent =
-      "Failed to load puzzles.json. Ensure puzzles.json is in repo root and GitHub Pages is deploying from root.";
+    els.status.textContent = "Failed to load puzzles.json (check GitHub Pages root deploy).";
     console.error(e);
     return;
   }
@@ -290,78 +365,41 @@ async function main() {
   try {
     const impRaw = await fetchJson(impossibleUrl);
     impossibleMap = normalizeImpossible(impRaw);
-  } catch (e) {
-    console.warn("impossible.json not found or failed to load (optional).", e);
+  } catch {
     impossibleMap = {};
   }
 
   const puzzles = puzzlesData.puzzles || [];
-  status.textContent = `Loaded ${puzzles.length} puzzles.`;
+  els.status.textContent = `Loaded ${puzzles.length} puzzles.`;
 
-  let currentFiltered = puzzles.slice();
-  let currentPage = 1;
+  const state = {
+    page: 1,
+    totalPages: 1,
+    filtered: puzzles.slice(),
+    renderPage: () => {},
+  };
 
-  const q = $("#q");
+  state.renderPage = () => {
+    const query = (els.q?.value || "").trim();
+    state.filtered = puzzles.filter(p => matchesQuery(p, query, impossibleMap));
 
-  const rerender = (resetPage = false) => {
-    if (resetPage) currentPage = 1;
+    state.totalPages = Math.max(1, Math.ceil(state.filtered.length / PAGE_SIZE));
+    state.page = clamp(state.page, 1, state.totalPages);
 
-    const query = (q?.value || "").trim();
-    currentFiltered = puzzles.filter((p) => matchesQuery(p, query, impossibleMap));
+    const start = (state.page - 1) * PAGE_SIZE;
+    const pageItems = state.filtered.slice(start, start + PAGE_SIZE);
 
-    const totalPages = Math.max(1, Math.ceil(currentFiltered.length / PAGE_SIZE));
-    currentPage = clamp(currentPage, 1, totalPages);
-
-    const start = (currentPage - 1) * PAGE_SIZE;
-    const pageItems = currentFiltered.slice(start, start + PAGE_SIZE);
-
-    status.textContent = `Showing ${currentFiltered.length} results — ${PAGE_SIZE} per page`;
-    setPagerUI(currentPage, totalPages);
+    els.status.textContent = `Showing ${state.filtered.length} results — ${PAGE_SIZE} per page`;
     renderList(pageItems, impossibleMap);
+
+    buildPager(els.pagerTop, state);
+    buildPager(els.pagerBottom, state);
   };
 
-  q?.addEventListener("input", () => rerender(true));
-  $("#toggleAllSolutions")?.addEventListener("change", () => rerender(false));
+  els.q?.addEventListener("input", () => { state.page = 1; state.renderPage(); });
+  els.toggleAllSolutions?.addEventListener("change", () => state.renderPage());
 
-  const wirePager = (prevId, nextId, which) => {
-    const prev = $(prevId);
-    const next = $(nextId);
-
-    prev?.addEventListener("click", () => {
-      currentPage -= 1;
-      rerender(false);
-      // keep focus stable
-    });
-    next?.addEventListener("click", () => {
-      currentPage += 1;
-      rerender(false);
-    });
-  };
-
-  // Top + bottom pager
-  $("#prevPage")?.addEventListener("click", () => { currentPage--; rerender(false); });
-  $("#nextPage")?.addEventListener("click", () => { currentPage++; rerender(false); });
-  $("#prevPage2")?.addEventListener("click", () => { currentPage--; rerender(false); });
-  $("#nextPage2")?.addEventListener("click", () => { currentPage++; rerender(false); });
-
-  // Random puzzle: choose from filtered results, jump to correct page, then open puzzle
-  $("#randomBtn")?.addEventListener("click", () => {
-    if (!currentFiltered.length) return;
-
-    const pick = currentFiltered[Math.floor(Math.random() * currentFiltered.length)];
-    const idx = currentFiltered.findIndex(p => p.id === pick.id);
-
-    const totalPages = Math.max(1, Math.ceil(currentFiltered.length / PAGE_SIZE));
-    const targetPage = clamp(Math.floor(idx / PAGE_SIZE) + 1, 1, totalPages);
-
-    currentPage = targetPage;
-    rerender(false);
-
-    // DOM updates immediately after renderList, so jump now
-    jumpToPuzzle(pick.id);
-  });
-
-  rerender(true);
+  state.renderPage();
 }
 
 main();
