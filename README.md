@@ -41,6 +41,14 @@ No accounts, no tracking, no backend — just static files.
   - The list is designed to scale (001 → 100+) and can be updated automatically (e.g., via a small script / workflow) without manual editing of the UI code.
 
 <!-- IMPOSSIBLE:START -->
+
+Known broken / unsolvable puzzles are flagged in the UI:
+
+- 006 — *Light Weight*
+- 009 — *One Poor Pooch*
+- 019 — *Parking Lot Gridlock (US) / Car Park Gridlock (UK)*
+- 025 — *Equilateral Triangle*
+
 <!-- IMPOSSIBLE:END -->
 
 
