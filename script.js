@@ -1,7 +1,26 @@
 const $ = (sel) => document.querySelector(sel);
 
+const PAGE_SIZE = 10;
+
 function pad3(n) {
   return String(n).padStart(3, "0");
+}
+
+function sanitizeTitle(t, pid) {
+  // Remove duplicate numbering like "Puzzle 006 - Light Weight" or "006 - Light Weight"
+  if (!t) return `Puzzle ${pad3(pid)}`;
+
+  let s = String(t).trim();
+
+  // Remove "Puzzle 006" prefix variants
+  s = s.replace(/^\s*puzzle\s*\d{1,3}\s*[-:–—]?\s*/i, "");
+
+  // Remove "006" prefix variants
+  s = s.replace(/^\s*\d{1,3}\s*[-:–—]\s*/i, "");
+
+  // If it becomes empty, fall back
+  s = s.trim();
+  return s || `Puzzle ${pad3(pid)}`;
 }
 
 function makeImg(src) {
@@ -46,10 +65,11 @@ function matchesQuery(p, q, impossibleMap) {
   q = q.toLowerCase().trim();
 
   const impossibleName = impossibleMap?.[p.id] || "";
+  const titleClean = sanitizeTitle(p.title, p.id);
 
   const hay = [
     `#${pad3(p.id)}`,
-    p.title || "",
+    titleClean,
     impossibleName,
     p.solution_text || "",
   ].join(" ").toLowerCase();
@@ -57,16 +77,16 @@ function matchesQuery(p, q, impossibleMap) {
   return hay.includes(q);
 }
 
-function renderList(puzzles, impossibleMap) {
+function renderList(puzzlesPage, impossibleMap) {
   const list = $("#list");
   list.innerHTML = "";
 
   const openSol = $("#toggleAllSolutions")?.checked;
 
-  for (const p of puzzles) {
+  for (const p of puzzlesPage) {
     const d = document.createElement("details");
     d.className = "puzzle";
-    d.dataset.pid = String(p.id); // ✅ used by random puzzle jump
+    d.dataset.pid = String(p.id);
 
     const s = document.createElement("summary");
 
@@ -76,19 +96,10 @@ function renderList(puzzles, impossibleMap) {
 
     const title = document.createElement("span");
     title.className = "title";
-    title.textContent = p.title || `Puzzle ${pad3(p.id)}`;
+    title.textContent = sanitizeTitle(p.title, p.id);
 
     const meta = document.createElement("span");
     meta.className = "meta";
-
-    const imgCount = Object.values(p.images || {}).reduce(
-      (acc, arr) => acc + (arr?.length || 0),
-      0
-    );
-
-    const count = document.createElement("span");
-    count.textContent = `${imgCount} imgs`;
-    meta.appendChild(count);
 
     // impossible marker (from impossible.json)
     const impossibleName = impossibleMap?.[p.id];
@@ -107,7 +118,7 @@ function renderList(puzzles, impossibleMap) {
     const section = document.createElement("div");
     section.className = "section";
 
-    // PUZZLE images
+    // PUZZLE
     const puzzleImgs = p.images?.puzzle || [];
     if (puzzleImgs.length) {
       const h = document.createElement("h3");
@@ -116,13 +127,20 @@ function renderList(puzzles, impossibleMap) {
       section.appendChild(sectionGrid(puzzleImgs));
     }
 
-    // HINTS (sequential unlocking)
+    // HINTS (left-to-right row) + sequential unlock
     const hint1 = p.images?.hint1 || [];
     const hint2 = p.images?.hint2 || [];
     const hint3 = p.images?.hint3 || [];
-
     const hasAnyHints = hint1.length || hint2.length || hint3.length;
+
     if (hasAnyHints) {
+      const rowTitle = document.createElement("h3");
+      rowTitle.textContent = "Hints";
+      section.appendChild(rowTitle);
+
+      const row = document.createElement("div");
+      row.className = "hintsRow";
+
       const { d: h1d, inner: h1i } = subDetails("Hint 1", false);
       if (hint1.length) h1i.appendChild(sectionGrid(hint1));
       else {
@@ -150,6 +168,7 @@ function renderList(puzzles, impossibleMap) {
         h3i.appendChild(t);
       }
 
+      // Lock 2 + 3 until previous opened
       h2d.classList.add("locked");
       h3d.classList.add("locked");
 
@@ -157,9 +176,10 @@ function renderList(puzzles, impossibleMap) {
       h1d.addEventListener("toggle", () => { if (h1d.open) unlock(h2d); });
       h2d.addEventListener("toggle", () => { if (h2d.open) unlock(h3d); });
 
-      section.appendChild(h1d);
-      section.appendChild(h2d);
-      section.appendChild(h3d);
+      row.appendChild(h1d);
+      row.appendChild(h2d);
+      row.appendChild(h3d);
+      section.appendChild(row);
     }
 
     // SOLUTION
@@ -199,7 +219,6 @@ function normalizeImpossible(raw) {
 }
 
 function flashElement(el) {
-  // quick inline “highlight flash” without changing your CSS file
   const oldOutline = el.style.outline;
   const oldOutlineOffset = el.style.outlineOffset;
   const oldTransition = el.style.transition;
@@ -208,10 +227,7 @@ function flashElement(el) {
   el.style.outline = "3px solid rgba(234,158,68,.95)";
   el.style.outlineOffset = "4px";
 
-  setTimeout(() => {
-    el.style.outline = "3px solid rgba(234,158,68,.0)";
-  }, 220);
-
+  setTimeout(() => { el.style.outline = "3px solid rgba(234,158,68,.0)"; }, 220);
   setTimeout(() => {
     el.style.outline = oldOutline;
     el.style.outlineOffset = oldOutlineOffset;
@@ -222,15 +238,34 @@ function flashElement(el) {
 function jumpToPuzzle(pid) {
   const el = document.querySelector(`details.puzzle[data-pid="${pid}"]`);
   if (!el) return false;
-
-  // open puzzle
   el.open = true;
-
-  // scroll + flash
   el.scrollIntoView({ behavior: "smooth", block: "start" });
   flashElement(el);
-
   return true;
+}
+
+function clamp(n, lo, hi) {
+  return Math.max(lo, Math.min(hi, n));
+}
+
+function setPagerUI(page, totalPages) {
+  const info = $("#pageInfo");
+  const info2 = $("#pageInfo2");
+  if (info) info.textContent = `Page ${page} / ${totalPages}`;
+  if (info2) info2.textContent = `Page ${page} / ${totalPages}`;
+
+  const prev = $("#prevPage");
+  const next = $("#nextPage");
+  const prev2 = $("#prevPage2");
+  const next2 = $("#nextPage2");
+
+  const atStart = page <= 1;
+  const atEnd = page >= totalPages;
+
+  if (prev) prev.disabled = atStart;
+  if (prev2) prev2.disabled = atStart;
+  if (next) next.disabled = atEnd;
+  if (next2) next2.disabled = atEnd;
 }
 
 async function main() {
@@ -251,7 +286,6 @@ async function main() {
     return;
   }
 
-  // impossible.json is optional
   let impossibleMap = {};
   try {
     const impRaw = await fetchJson(impossibleUrl);
@@ -264,33 +298,70 @@ async function main() {
   const puzzles = puzzlesData.puzzles || [];
   status.textContent = `Loaded ${puzzles.length} puzzles.`;
 
-  // We'll keep the currently displayed list here (for random)
   let currentFiltered = puzzles.slice();
+  let currentPage = 1;
 
   const q = $("#q");
 
-  const rerender = () => {
+  const rerender = (resetPage = false) => {
+    if (resetPage) currentPage = 1;
+
     const query = (q?.value || "").trim();
     currentFiltered = puzzles.filter((p) => matchesQuery(p, query, impossibleMap));
-    status.textContent = `Showing ${currentFiltered.length} / ${puzzles.length}`;
-    renderList(currentFiltered, impossibleMap);
+
+    const totalPages = Math.max(1, Math.ceil(currentFiltered.length / PAGE_SIZE));
+    currentPage = clamp(currentPage, 1, totalPages);
+
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const pageItems = currentFiltered.slice(start, start + PAGE_SIZE);
+
+    status.textContent = `Showing ${currentFiltered.length} results — ${PAGE_SIZE} per page`;
+    setPagerUI(currentPage, totalPages);
+    renderList(pageItems, impossibleMap);
   };
 
-  q?.addEventListener("input", rerender);
-  $("#toggleAllSolutions")?.addEventListener("change", rerender);
+  q?.addEventListener("input", () => rerender(true));
+  $("#toggleAllSolutions")?.addEventListener("change", () => rerender(false));
 
-  // 🎲 Random puzzle button
-  const randomBtn = $("#randomBtn");
-  randomBtn?.addEventListener("click", () => {
+  const wirePager = (prevId, nextId, which) => {
+    const prev = $(prevId);
+    const next = $(nextId);
+
+    prev?.addEventListener("click", () => {
+      currentPage -= 1;
+      rerender(false);
+      // keep focus stable
+    });
+    next?.addEventListener("click", () => {
+      currentPage += 1;
+      rerender(false);
+    });
+  };
+
+  // Top + bottom pager
+  $("#prevPage")?.addEventListener("click", () => { currentPage--; rerender(false); });
+  $("#nextPage")?.addEventListener("click", () => { currentPage++; rerender(false); });
+  $("#prevPage2")?.addEventListener("click", () => { currentPage--; rerender(false); });
+  $("#nextPage2")?.addEventListener("click", () => { currentPage++; rerender(false); });
+
+  // Random puzzle: choose from filtered results, jump to correct page, then open puzzle
+  $("#randomBtn")?.addEventListener("click", () => {
     if (!currentFiltered.length) return;
 
     const pick = currentFiltered[Math.floor(Math.random() * currentFiltered.length)];
-    // After rerender, the DOM exists. We can jump immediately.
-    // If the list is long, scroll will move you right to it.
+    const idx = currentFiltered.findIndex(p => p.id === pick.id);
+
+    const totalPages = Math.max(1, Math.ceil(currentFiltered.length / PAGE_SIZE));
+    const targetPage = clamp(Math.floor(idx / PAGE_SIZE) + 1, 1, totalPages);
+
+    currentPage = targetPage;
+    rerender(false);
+
+    // DOM updates immediately after renderList, so jump now
     jumpToPuzzle(pick.id);
   });
 
-  rerender();
+  rerender(true);
 }
 
 main();
