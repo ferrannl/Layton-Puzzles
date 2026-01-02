@@ -352,9 +352,6 @@ img.pimg{
   border-radius: var(--imgRadius);
   cursor: zoom-in;
 }
-.thumb.cropTop img.pimg{
-  clip-path: inset(var(--cropTop) 0 0 0);
-}
 
 /* Subdetails */
 .subdetails{
