@@ -23,22 +23,42 @@ body{
 }
 
 /* Layout */
-.wrap{max-width:1100px;margin:0 auto;padding:18px}
+.wrap{
+  max-width:1100px;
+  margin:0 auto;
+  padding:18px;
+}
 
-/* Topbar: flat, 2-tone */
+/* Topbar */
 .topbar{
-  position:sticky;top:0;z-index:20;
+  position:sticky;
+  top:0;
+  z-index:20;
   background: var(--panel);
   border-bottom:3px solid var(--o1);
 }
-h1{margin:6px 0 2px;font-size:22px;letter-spacing:.02em}
-.sub{margin:0 0 12px;color:var(--muted);font-size:14px}
 
-.controls{
-  display:flex;gap:12px;flex-wrap:wrap;align-items:center;
+h1{
+  margin:6px 0 2px;
+  font-size:22px;
+  letter-spacing:.02em;
 }
 
-/* Search: simple, strong accent focus */
+.sub{
+  margin:0 0 12px;
+  color:var(--muted);
+  font-size:14px;
+}
+
+/* Controls */
+.controls{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+
+/* Search */
 #q{
   flex:1;
   min-width:260px;
@@ -49,33 +69,55 @@ h1{margin:6px 0 2px;font-size:22px;letter-spacing:.02em}
   color:var(--text);
   outline:none;
 }
+
 #q:focus{
   border-color: var(--o1);
   box-shadow: 0 0 0 3px rgba(214,106,0,.25);
 }
-.chk{display:flex;gap:8px;align-items:center;color:var(--muted);font-size:13px}
 
-.status{color:var(--muted);padding:12px 0}
-.list{display:flex;flex-direction:column;gap:12px;padding-bottom:28px}
+.chk{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  color:var(--muted);
+  font-size:13px;
+}
 
-/* Puzzle card: flat blocks, strong color bar */
+/* Status */
+.status{
+  color:var(--muted);
+  padding:12px 0;
+}
+
+.list{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  padding-bottom:28px;
+}
+
+/* Puzzle card */
 .puzzle{
   border:2px solid var(--t1);
   border-radius:6px;
   background: var(--panel);
   overflow:hidden;
 }
+
 .puzzle > summary{
   cursor:pointer;
   list-style:none;
   padding:12px 14px;
-  display:flex;align-items:baseline;gap:10px;
-  background: #100a06;
+  display:flex;
+  align-items:baseline;
+  gap:10px;
+  background:#100a06;
   border-bottom:2px solid rgba(126,71,22,.5);
 }
+
 .puzzle > summary::-webkit-details-marker{display:none}
 
-/* Number badge: orange + black */
+/* Number badge */
 .badge{
   font-variant-numeric: tabular-nums;
   padding:3px 8px;
@@ -87,17 +129,21 @@ h1{margin:6px 0 2px;font-size:22px;letter-spacing:.02em}
 }
 
 /* Title */
-.title{font-size:15px}
+.title{
+  font-size:15px;
+}
 
-/* Meta: keep simple */
+/* Meta */
 .meta{
   margin-left:auto;
   color:rgba(255,255,255,.75);
   font-size:12px;
-  display:flex;gap:10px;align-items:center;
+  display:flex;
+  gap:10px;
+  align-items:center;
 }
 
-/* ✅ Impossible badge */
+/* Impossible badge */
 .impossible{
   display:inline-block;
   padding:3px 8px;
@@ -109,13 +155,13 @@ h1{margin:6px 0 2px;font-size:22px;letter-spacing:.02em}
   border:1px solid rgba(255,255,255,.18);
 }
 
-/* Inner section: flat */
+/* Inner section */
 .section{
   padding:12px 14px 16px;
   background: var(--panel);
 }
 
-/* Section headers: bold, single color */
+/* Section headers */
 .section h3{
   margin:12px 0 8px;
   font-size:12px;
@@ -128,12 +174,13 @@ h1{margin:6px 0 2px;font-size:22px;letter-spacing:.02em}
   background:#0f0a07;
 }
 
-/* Grid + thumbs */
+/* Grid */
 .grid{
   display:grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap:10px;
 }
+
 .thumb{
   border:2px solid rgba(255,255,255,.10);
   background:#0f0a07;
@@ -143,7 +190,7 @@ h1{margin:6px 0 2px;font-size:22px;letter-spacing:.02em}
   justify-content:center;
 }
 
-/* Image: consistent, sharp edges */
+/* Images (default: desktop & tablet) */
 img.pimg{
   width:251px;
   height:188px;
@@ -154,7 +201,7 @@ img.pimg{
   border-radius:0;
 }
 
-/* Subdetails: flat, with strong orange header */
+/* Subdetails */
 .subdetails{
   margin-top:10px;
   border:2px solid rgba(126,71,22,.65);
@@ -162,33 +209,44 @@ img.pimg{
   overflow:hidden;
   background:#0f0a07;
 }
+
 .subdetails > summary{
   cursor:pointer;
   list-style:none;
   padding:10px 12px;
-  display:flex;align-items:center;gap:10px;
+  display:flex;
+  align-items:center;
+  gap:10px;
   background: var(--t1);
   color:#fff;
   font-weight:700;
 }
+
 .subdetails > summary::-webkit-details-marker{display:none}
+
 .subdetails .inner{
   padding:10px 12px;
   border-top:2px solid rgba(0,0,0,.35);
   background: var(--panel);
 }
 
-.textline{color:var(--muted);margin:6px 0 0;font-size:14px}
+.textline{
+  color:var(--muted);
+  margin:6px 0 0;
+  font-size:14px;
+}
 
-/* Locked hints: simple “disabled” look */
+/* Locked hints */
 .locked{
   opacity:.45;
   pointer-events:none;
 }
+
 .locked > summary{
   background:#2a1a0f;
   color:rgba(255,255,255,.70);
 }
+
 .locked > summary::after{
   content:"  (locked)";
   color: rgba(234,158,68,.9);
@@ -197,5 +255,42 @@ img.pimg{
   margin-left:6px;
 }
 
-/* Hide footer if any */
+/* Footer */
 .footer{display:none}
+
+/* ===========================
+   📱 MOBILE IMPROVEMENTS
+   =========================== */
+@media (max-width: 600px){
+
+  /* Use more screen width */
+  .wrap{
+    padding:10px;
+  }
+
+  /* Slightly tighter puzzle padding */
+  .puzzle > summary{
+    padding:10px;
+  }
+
+  .section{
+    padding:10px 10px 14px;
+  }
+
+  /* Single column grid */
+  .grid{
+    grid-template-columns: 1fr;
+  }
+
+  .thumb{
+    padding:6px;
+  }
+
+  /* Bigger images on phone, but not full-bleed */
+  img.pimg{
+    width:100%;
+    max-width:420px;
+    height:auto;
+    min-height:220px;
+  }
+}
