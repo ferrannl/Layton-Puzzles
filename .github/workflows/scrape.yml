@@ -6,6 +6,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: layton-puzzles-update
+  cancel-in-progress: true
+
 jobs:
   scrape:
     runs-on: ubuntu-latest
@@ -13,6 +17,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # important for rebase
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -33,9 +39,34 @@ jobs:
           python -c "import json; d=json.load(open('puzzles.json','r',encoding='utf-8')); print('count:', d.get('count'))"
 
       - name: Commit + push if changed
+        env:
+          BRANCH: ${{ github.ref_name }}
         run: |
+          set -e
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
           git add puzzles.json
-          git diff --cached --quiet || git commit -m "Update puzzles.json"
-          git push
+          git diff --cached --quiet && echo "No changes to commit" && exit 0
+
+          git commit -m "Update puzzles.json"
+
+          # Sync with remote to avoid non-fast-forward push rejection
+          git fetch origin "$BRANCH"
+          git rebase "origin/$BRANCH"
+
+          # Push (retry a couple times in case another run pushed in between)
+          for i in 1 2 3; do
+            if git push origin "HEAD:$BRANCH"; then
+              echo "Pushed successfully"
+              exit 0
+            fi
+            echo "Push failed, retrying... ($i)"
+            sleep 2
+            git fetch origin "$BRANCH"
+            git rebase "origin/$BRANCH" || (git rebase --abort && git rebase "origin/$BRANCH")
+          done
+
+          echo "Failed to push after retries"
+          exit 1
