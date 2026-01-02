@@ -14,23 +14,25 @@
 
       <div class="controls">
         <input id="q" type="search" placeholder="Search by # or title… e.g. 63, village, picarats" />
-
         <label class="chk">
           <input id="toggleAllSolutions" type="checkbox" />
           Auto-open Solutions
         </label>
       </div>
 
+      <!-- OPTIONAL: top pager (you removed it — that's fine)
+      <div class="pager top" id="pagerTop" aria-label="Page navigation top"></div>
+      -->
     </div>
   </header>
 
   <main class="wrap">
     <div id="status" class="status">Loading puzzles…</div>
     <div id="list" class="list"></div>
-
-    <!-- Fancy pager bottom -->
-    <div class="pager bottom" id="pagerBottom" aria-label="Page navigation bottom"></div>
   </main>
+
+  <!-- ✅ Full-width bottom pager (outside .wrap, fills viewport) -->
+  <div class="pager bottom" id="pagerBottom" aria-label="Page navigation bottom"></div>
 
   <script src="script.js"></script>
 </body>
