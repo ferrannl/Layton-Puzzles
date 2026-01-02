@@ -25,7 +25,7 @@ function sanitizeTitle(t, pid) {
   // Remove "003 -", "003 –", etc.
   s = s.replace(/^\s*\d{3}\s*[-:–—]\s*/i, "");
 
-  // ✅ Remove plain "003 " (digits + space)
+  // Remove plain "003 " (digits + space)
   s = s.replace(/^\s*\d{3}\s+/i, "");
 
   s = s.trim();
@@ -124,21 +124,19 @@ function renderList(puzzlesPage, impossibleMap) {
     const section = document.createElement("div");
     section.className = "section";
 
-    // PUZZLE
+    // PUZZLE IMAGES (no heading)
     const puzzleImgs = p.images?.puzzle || [];
     if (puzzleImgs.length) {
       section.appendChild(sectionGrid(puzzleImgs));
     }
 
-    // HINTS row (left->right) with sequential lock
+    // HINTS row (no heading)
     const hint1 = p.images?.hint1 || [];
     const hint2 = p.images?.hint2 || [];
     const hint3 = p.images?.hint3 || [];
     const hasAnyHints = hint1.length || hint2.length || hint3.length;
 
     if (hasAnyHints) {
-      section.appendChild(rowTitle);
-
       const row = document.createElement("div");
       row.className = "hintsRow";
 
@@ -154,6 +152,7 @@ function renderList(puzzlesPage, impossibleMap) {
       if (hint3.length) h3i.appendChild(sectionGrid(hint3));
       else h3i.appendChild(Object.assign(document.createElement("div"), { className:"textline", textContent:"(no images)" }));
 
+      // sequential unlock
       h2d.classList.add("locked");
       h3d.classList.add("locked");
 
@@ -166,11 +165,11 @@ function renderList(puzzlesPage, impossibleMap) {
       row.appendChild(h3d);
       section.appendChild(row);
 
-      // ✅ <br> between hints and solution
+      // <br> between hints and solution
       section.appendChild(document.createElement("br"));
     }
 
-    // SOLUTION (all images already filtered by scraper)
+    // SOLUTION
     const solImgs = p.images?.solution || [];
     if (solImgs.length || p.solution_text) {
       const { d: sd, inner } = subDetails("Solution", !!openSol);
@@ -257,7 +256,6 @@ function updateProgress(container, page, total) {
 
   const frac = total <= 1 ? 0 : (page - 1) / (total - 1);
 
-  // ✅ accurate: pixel translate within track bounds
   requestAnimationFrame(() => {
     const trackW = trackEl.clientWidth || 0;
     const pillW  = pillEl.clientWidth || 0;
@@ -321,7 +319,6 @@ function buildPager(container, state) {
 
   updateProgress(container, page, total);
 
-  // events
   prev.addEventListener("click", () => {
     if (state.page > 1) { state.page--; state.renderPage(); scrollToTop(); }
   });
@@ -352,7 +349,6 @@ function buildPager(container, state) {
     });
   });
 
-  // ✅ if viewport resizes, recompute pill position
   const onResize = () => updateProgress(container, state.page, state.totalPages);
   window.addEventListener("resize", onResize, { passive: true });
 }
