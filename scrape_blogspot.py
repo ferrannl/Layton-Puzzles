@@ -12,22 +12,19 @@ from bs4 import BeautifulSoup, Tag
 OUT_JSON = Path("puzzles.json")
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (compatible; LaytonScraper/3.1; +github-actions)",
+    "User-Agent": "Mozilla/5.0 (compatible; LaytonScraper/3.2; +github-actions)",
     "Accept-Language": "en-US,en;q=0.9",
 }
 
 TIMEOUT = 30
 SLEEP_SECONDS = 1.1
-
-# ✅ only scrape a small batch while testing
-MAX_PUZZLES = 30
+MAX_PUZZLES = 30  # adjust anytime (1..100+)
 
 SEEDS = [
     "https://professorlaytonwalkthrough.blogspot.com/2008/02/puzzle001.html",
     "https://professorlaytonwalkthrough.blogspot.com/",
 ]
 
-# ✅ only sections you want
 SECTION_KEYS = ["puzzle", "hint1", "hint2", "hint3", "solution"]
 
 @dataclass
@@ -45,17 +42,10 @@ def is_image_url(src: str) -> bool:
     return bool(src) and ("blogger.googleusercontent.com" in src or "bp.blogspot.com" in src)
 
 def detect_section(text: str) -> Optional[str]:
-    """
-    Returns one of:
-      - puzzle/hint1/hint2/hint3/solution  => start collecting under that section
-      - __STOP__                          => stop collecting any further images (Progress area)
-      - None                              => no change
-    """
     t = clean_text(text).lower()
     if not t:
         return None
 
-    # Main anchors
     if t.startswith("puzzle "):
         return "puzzle"
     if t.startswith("hint 1"):
@@ -66,12 +56,8 @@ def detect_section(text: str) -> Optional[str]:
         return "hint3"
     if t.startswith("solution"):
         return "solution"
-
-    # ✅ Progress section: everything after is useless
-    # Blog sometimes uses "Progress" text; we treat it as end-of-useful-content.
     if t.startswith("progress"):
         return "__STOP__"
-
     return None
 
 def find_post_container(soup: BeautifulSoup) -> Tag:
@@ -123,7 +109,6 @@ def looks_blocked_or_empty(html: str) -> bool:
     return False
 
 def fetch_with_fallback(session: requests.Session, url: str) -> Tuple[int, str, str]:
-    # 1) direct
     try:
         r = session.get(url, headers=HEADERS, timeout=TIMEOUT, allow_redirects=True)
         html = r.text or ""
@@ -132,7 +117,6 @@ def fetch_with_fallback(session: requests.Session, url: str) -> Tuple[int, str, 
     except requests.RequestException:
         pass
 
-    # 2) proxy fallback
     proxy_url = "https://r.jina.ai/" + url
     try:
         r2 = session.get(proxy_url, headers=HEADERS, timeout=TIMEOUT, allow_redirects=True)
@@ -185,22 +169,22 @@ def scrape_one(session: requests.Session, url: str) -> Optional[Puzzle]:
     in_solution = False
     solution_text = ""
 
-    # We do NOT collect any images until we see "Puzzle xxx"/"Hint"/"Solution".
     for el in container.find_all(["h1", "h2", "h3", "p", "div", "span", "img"], recursive=True):
         if el.name in ["h1", "h2", "h3", "p", "span", "div"]:
             txt = clean_text(el.get_text(" ", strip=True))
             sec = detect_section(txt)
+
             if sec == "__STOP__":
                 stop_collecting = True
                 current_section = None
                 in_solution = False
                 continue
+
             if sec in SECTION_KEYS:
                 current_section = sec
                 in_solution = (sec == "solution")
                 continue
 
-            # short solution text right after Solution header
             if in_solution and not solution_text and txt and txt.lower() != "solution":
                 if len(txt) <= 260 and not txt.lower().startswith("hint"):
                     solution_text = txt
@@ -213,8 +197,12 @@ def scrape_one(session: requests.Session, url: str) -> Optional[Puzzle]:
             if not is_image_url(src):
                 continue
 
-            # skip any images above Puzzle/Hint/Solution
+            # do not collect images until we're inside a useful section
             if current_section is None:
+                continue
+
+            # ✅ limit solution images to 2 (prevents the “extra useless third”)
+            if current_section == "solution" and len(images["solution"]) >= 2:
                 continue
 
             if src not in images[current_section]:
@@ -232,7 +220,6 @@ def main():
     with requests.Session() as session:
         urls = discover_puzzle_urls(session)
 
-        # fallback sequential if discovery fails
         if not urls:
             print("No links discovered; fallback sequential 001..200")
             urls = [
