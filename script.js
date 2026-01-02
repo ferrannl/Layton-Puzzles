@@ -113,7 +113,7 @@ function renderList(puzzlesPage, impossibleMap) {
       const imp = document.createElement("span");
       imp.className = "impossible";
       imp.title = impossibleName;
-      imp.textContent = "Impossible";
+      imp.textContent = "Infeasible";
       meta.appendChild(imp);
     }
 
