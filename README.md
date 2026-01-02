@@ -40,6 +40,10 @@ No accounts, no tracking, no backend — just static files.
   - The UI shows an **“Impossible”** badge when a puzzle is in that list.
   - The list is designed to scale (001 → 100+) and can be updated automatically (e.g., via a small script / workflow) without manual editing of the UI code.
 
+<!-- IMPOSSIBLE:START -->
+<!-- IMPOSSIBLE:END -->
+
+
 ---
 
 ## Project Structure
