@@ -380,7 +380,7 @@ img.pimg{
   display:flex;
   align-items:center;
   justify-content:center;
-  background: color-mix(in srgb, var(--panel) 82%, rgba(0,0,0,.25));
+  background: color-mix(in srgb, var(--panel) 45%, transparent); /* was ~82% */
   border:1px solid color-mix(in srgb, var(--o1) 25%, transparent);
   box-shadow: 0 8px 16px rgba(0,0,0,.18);
   color: var(--text);
@@ -391,6 +391,7 @@ img.pimg{
   background: linear-gradient(180deg, var(--o2), var(--o1));
   color:#1a110a;
   border:1px solid rgba(0,0,0,.25);
+  opacity:.92 ;
 }
 
 /* Subdetails */
