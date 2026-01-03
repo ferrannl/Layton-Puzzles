@@ -1,4 +1,3 @@
-
 const $ = (sel) => document.querySelector(sel);
 
 const PAGE_SIZE = 5;
@@ -9,8 +8,6 @@ const els = {
   list: $("#list"),
   toggleAllSolutions: $("#toggleAllSolutions"),
   pagerBottom: $("#pagerBottom"),
-  lightbox: $("#lightbox"),
-  lightboxImg: $("#lightboxImg"),
 };
 
 function pad3(n){ return String(n).padStart(3, "0"); }
@@ -40,10 +37,6 @@ function setTheme(theme) {
 }
 
 function installThemeToggle() {
-  const headerWrap = document.querySelector(".topbar .wrap");
-  if (!headerWrap) return;
-
-  // Put toggle in the controls row if possible
   const controls = document.querySelector(".controls");
   if (!controls) return;
 
@@ -101,33 +94,215 @@ function setSolved(pid, val, solvedMap) {
   saveSolved(solvedMap);
 }
 
-/* ---------- Lightbox ---------- */
+/* ---------- Memo Drawing (very simple) ---------- */
 
-function openLightbox(src) {
-  if (!els.lightbox || !els.lightboxImg) return;
-  els.lightboxImg.src = src;
-  els.lightbox.classList.add("open");
-  els.lightbox.setAttribute("aria-hidden", "false");
+const MEMO_KEY = "layton_memo_v1";
+
+function memoLoadAll() {
+  try {
+    const raw = localStorage.getItem(MEMO_KEY);
+    if (!raw) return {};
+    const obj = JSON.parse(raw);
+    return (obj && typeof obj === "object") ? obj : {};
+  } catch {
+    return {};
+  }
 }
 
-function closeLightbox() {
-  if (!els.lightbox || !els.lightboxImg) return;
-  els.lightbox.classList.remove("open");
-  els.lightbox.setAttribute("aria-hidden", "true");
-  els.lightboxImg.src = "";
+function memoSaveAll(map) {
+  try { localStorage.setItem(MEMO_KEY, JSON.stringify(map)); } catch {}
 }
 
-function wireLightboxOnce() {
-  if (!els.lightbox) return;
-  els.lightbox.addEventListener("click", () => closeLightbox());
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") closeLightbox();
+function memoIdFor(src) {
+  // stable-ish key per image url
+  return String(src || "");
+}
+
+function setActiveTool(btns, tool) {
+  btns.forEach(b => b.classList.toggle("active", b.dataset.tool === tool));
+}
+
+function fitCanvasToBox(canvas, box, keepImageDataURL) {
+  // Preserve existing drawing by snapshotting first
+  let snapshot = null;
+  if (keepImageDataURL) {
+    try { snapshot = canvas.toDataURL("image/png"); } catch {}
+  }
+
+  const w = Math.max(1, Math.round(box.clientWidth));
+  const h = Math.max(1, Math.round(box.clientHeight));
+
+  // Only resize if needed (resizing clears!)
+  if (canvas.width !== w || canvas.height !== h) {
+    canvas.width = w;
+    canvas.height = h;
+  }
+
+  if (snapshot) {
+    const img = new Image();
+    img.onload = () => {
+      const ctx = canvas.getContext("2d");
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    };
+    img.src = snapshot;
+  }
+}
+
+function installMemoOnThumb(thumbEl, imgEl, src, memoMap) {
+  const canvas = document.createElement("canvas");
+  canvas.className = "memoCanvas";
+  canvas.setAttribute("aria-label", "Memo drawing canvas");
+
+  const tools = document.createElement("div");
+  tools.className = "memoTools";
+
+  const mkTool = (emoji, tool, label) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "memoBtn";
+    b.dataset.tool = tool;
+    b.textContent = emoji;
+    b.setAttribute("aria-label", label);
+    b.title = label;
+    return b;
+  };
+
+  const btnPen   = mkTool("✏️", "pen", "Pen");
+  const btnErase = mkTool("🧽", "eraser", "Eraser");
+  const btnClear = mkTool("🗑️", "clear", "Clear");
+
+  tools.appendChild(btnPen);
+  tools.appendChild(btnErase);
+  tools.appendChild(btnClear);
+
+  thumbEl.appendChild(canvas);
+  thumbEl.appendChild(tools);
+
+  // make canvas match the visible image area (inside thumb padding)
+  const resizeNow = (keep) => fitCanvasToBox(canvas, imgEl, keep);
+
+  // once image loads, size canvas to it
+  const ensureSized = () => resizeNow(false);
+  if (imgEl.complete) ensureSized();
+  else imgEl.addEventListener("load", ensureSized, { once: true });
+
+  // restore saved drawing
+  const key = memoIdFor(src);
+  const saved = memoMap[key];
+  if (saved) {
+    const img = new Image();
+    img.onload = () => {
+      resizeNow(false);
+      const ctx = canvas.getContext("2d");
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    };
+    img.src = saved;
+  }
+
+  // tools + state
+  let tool = "pen";
+  setActiveTool([btnPen, btnErase], tool);
+
+  btnPen.addEventListener("click", (e) => {
+    e.preventDefault(); e.stopPropagation();
+    tool = "pen";
+    setActiveTool([btnPen, btnErase], tool);
   });
+
+  btnErase.addEventListener("click", (e) => {
+    e.preventDefault(); e.stopPropagation();
+    tool = "eraser";
+    setActiveTool([btnPen, btnErase], tool);
+  });
+
+  btnClear.addEventListener("click", (e) => {
+    e.preventDefault(); e.stopPropagation();
+    if (!confirm("Clear drawing on this image?")) return;
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    delete memoMap[key];
+    memoSaveAll(memoMap);
+  });
+
+  // drawing
+  const ctx = canvas.getContext("2d");
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  let drawing = false;
+  let lastX = 0, lastY = 0;
+
+  const getPos = (evt) => {
+    const r = canvas.getBoundingClientRect();
+    const t = (evt.touches && evt.touches[0]) ? evt.touches[0] : evt;
+    return {
+      x: (t.clientX - r.left),
+      y: (t.clientY - r.top),
+    };
+  };
+
+  const start = (evt) => {
+    // don't start drawing when clicking tool buttons
+    if (evt.target && evt.target.closest && evt.target.closest(".memoTools")) return;
+
+    drawing = true;
+    const p = getPos(evt);
+    lastX = p.x; lastY = p.y;
+    evt.preventDefault();
+  };
+
+  const move = (evt) => {
+    if (!drawing) return;
+    const p = getPos(evt);
+
+    if (tool === "eraser") {
+      ctx.globalCompositeOperation = "destination-out";
+      ctx.lineWidth = 22;
+    } else {
+      ctx.globalCompositeOperation = "source-over";
+      ctx.strokeStyle = "#000000";
+      ctx.lineWidth = 4;
+    }
+
+    ctx.beginPath();
+    ctx.moveTo(lastX, lastY);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+
+    lastX = p.x; lastY = p.y;
+    evt.preventDefault();
+  };
+
+  const end = () => {
+    if (!drawing) return;
+    drawing = false;
+
+    // save snapshot
+    try {
+      memoMap[key] = canvas.toDataURL("image/png");
+      memoSaveAll(memoMap);
+    } catch {}
+  };
+
+  // pointer events
+  canvas.addEventListener("mousedown", start);
+  window.addEventListener("mousemove", move, { passive:false });
+  window.addEventListener("mouseup", end);
+
+  canvas.addEventListener("touchstart", start, { passive:false });
+  canvas.addEventListener("touchmove", move, { passive:false });
+  canvas.addEventListener("touchend", end);
+
+  // keep drawings aligned on resize (scale old drawing)
+  const onResize = () => resizeNow(true);
+  window.addEventListener("resize", onResize, { passive:true });
 }
 
 /* ---------- Images ---------- */
 
-function makeImg(src, { cropTop=false } = {}) {
+function makeImg(src, memoMap, { cropTop=false } = {}) {
   const wrap = document.createElement("div");
   wrap.className = "thumb" + (cropTop ? " cropTop" : "");
 
@@ -137,22 +312,20 @@ function makeImg(src, { cropTop=false } = {}) {
   img.referrerPolicy = "no-referrer";
   img.src = src;
 
-  img.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    openLightbox(src);
-  });
-
   wrap.appendChild(img);
+
+  // install memo overlay
+  installMemoOnThumb(wrap, img, src, memoMap);
+
   return wrap;
 }
 
-function sectionGrid(urls, { cropIndex=null } = {}) {
+function sectionGrid(urls, memoMap, { cropIndex=null } = {}) {
   const grid = document.createElement("div");
   grid.className = "grid";
 
   (urls || []).forEach((u, idx) => {
-    grid.appendChild(makeImg(u, { cropTop: cropIndex === idx }));
+    grid.appendChild(makeImg(u, memoMap, { cropTop: cropIndex === idx }));
   });
 
   return grid;
@@ -205,7 +378,7 @@ function closeOtherPuzzles(current) {
 
 /* ---------- Render ---------- */
 
-function renderList(puzzlesPage, impossibleMap, solvedMap) {
+function renderList(puzzlesPage, impossibleMap, solvedMap, memoMap) {
   els.list.innerHTML = "";
   const openSol = els.toggleAllSolutions?.checked;
 
@@ -268,7 +441,7 @@ function renderList(puzzlesPage, impossibleMap, solvedMap) {
     // Puzzle images: crop FIRST image
     const puzzleImgs = p.images?.puzzle || [];
     if (puzzleImgs.length) {
-      section.appendChild(sectionGrid(puzzleImgs, { cropIndex: 0 }));
+      section.appendChild(sectionGrid(puzzleImgs, memoMap, { cropIndex: 0 }));
     }
 
     // Hints
@@ -282,15 +455,15 @@ function renderList(puzzlesPage, impossibleMap, solvedMap) {
       row.className = "hintsRow";
 
       const { d: h1d, inner: h1i } = subDetails("Hint 1", "hint1", false);
-      if (hint1.length) h1i.appendChild(sectionGrid(hint1));
+      if (hint1.length) h1i.appendChild(sectionGrid(hint1, memoMap));
       else h1i.appendChild(Object.assign(document.createElement("div"), { className:"textline", textContent:"(no images)" }));
 
       const { d: h2d, inner: h2i } = subDetails("Hint 2", "hint2", false);
-      if (hint2.length) h2i.appendChild(sectionGrid(hint2));
+      if (hint2.length) h2i.appendChild(sectionGrid(hint2, memoMap));
       else h2i.appendChild(Object.assign(document.createElement("div"), { className:"textline", textContent:"(no images)" }));
 
       const { d: h3d, inner: h3i } = subDetails("Hint 3", "hint3", false);
-      if (hint3.length) h3i.appendChild(sectionGrid(hint3));
+      if (hint3.length) h3i.appendChild(sectionGrid(hint3, memoMap));
       else h3i.appendChild(Object.assign(document.createElement("div"), { className:"textline", textContent:"(no images)" }));
 
       h2d.classList.add("locked");
@@ -318,7 +491,7 @@ function renderList(puzzlesPage, impossibleMap, solvedMap) {
         t.textContent = p.solution_text;
         inner.appendChild(t);
       }
-      if (solImgs.length) inner.appendChild(sectionGrid(solImgs, { cropIndex: 1 }));
+      if (solImgs.length) inner.appendChild(sectionGrid(solImgs, memoMap, { cropIndex: 1 }));
       section.appendChild(sd);
     }
 
@@ -493,10 +666,8 @@ function buildPager(container, state) {
 /* ---------- Main ---------- */
 
 async function main() {
-  wireLightboxOnce();
   installThemeToggle();
 
-  // you already nuked status; keep it hidden
   if (els.status) els.status.style.display = "none";
 
   const BASE = new URL(".", window.location.href).href;
@@ -504,6 +675,7 @@ async function main() {
   const impossibleUrl = BASE + "impossible.json";
 
   const solvedMap = loadSolved();
+  const memoMap = memoLoadAll();
 
   let puzzlesData;
   try {
@@ -540,7 +712,7 @@ async function main() {
     const start = (state.page - 1) * PAGE_SIZE;
     const pageItems = state.filtered.slice(start, start + PAGE_SIZE);
 
-    renderList(pageItems, impossibleMap, solvedMap);
+    renderList(pageItems, impossibleMap, solvedMap, memoMap);
     buildPager(els.pagerBottom, state);
   };
 
