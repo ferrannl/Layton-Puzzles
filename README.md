@@ -102,6 +102,7 @@ Known broken / unsolvable puzzles are flagged in the UI:
 - 009 — *One Poor Pooch*
 - 019 — *Parking Lot Gridlock (US) / Car Park Gridlock (UK)*
 - 025 — *Equilateral Triangle*
+- 135 — *Royal Escape (US) / Queen's Escape (UK)*
 
 <!-- IMPOSSIBLE:END -->
 
