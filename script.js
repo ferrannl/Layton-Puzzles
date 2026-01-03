@@ -1,3 +1,4 @@
+
 const $ = (sel) => document.querySelector(sel);
 
 const PAGE_SIZE = 5;
@@ -43,6 +44,14 @@ function installThemeToggle() {
   const holder = document.createElement("div");
   holder.className = "themeToggle";
 
+  // More puzzles pill (goes left of theme pill)
+  const moreBtn = document.createElement("button");
+  moreBtn.type = "button";
+  moreBtn.className = "morePuzzlesPill";
+  moreBtn.id = "morePuzzlesBtn";
+  moreBtn.textContent = "More puzzles";
+
+  // Theme pill
   const btn = document.createElement("button");
   btn.type = "button";
   btn.className = "themePill";
@@ -59,11 +68,88 @@ function installThemeToggle() {
     refreshLabel();
   });
 
+  holder.appendChild(moreBtn);
   holder.appendChild(btn);
   controls.appendChild(holder);
 
   setTheme(getTheme());
   refreshLabel();
+
+  // Install modal behavior
+  installMorePuzzlesModal(moreBtn);
+}
+
+/* ---------- More puzzles modal ---------- */
+
+function installMorePuzzlesModal(triggerBtn){
+  if (!triggerBtn) return;
+
+  // Only create once
+  if (document.querySelector("#moreModal")) return;
+
+  const modal = document.createElement("div");
+  modal.className = "moreModal";
+  modal.id = "moreModal";
+  modal.setAttribute("aria-hidden", "true");
+
+  // Placeholder URLs (your pattern). Change later whenever you want.
+  const links = [
+    { name: "Curious Village (the one you're on)", url: "https://ferrannl.github.io/Layton-Puzzles/" },
+    { name: "Diabolical Box", url: "https://ferrannl.github.io/Layton-Puzzles/diabolical-box.html" },
+    { name: "Unwound Future", url: "https://ferrannl.github.io/Layton-Puzzles/unwound-future.html" },
+    { name: "Last Specter", url: "https://ferrannl.github.io/Layton-Puzzles/last-specter.html" },
+    { name: "Miracle Mask", url: "https://ferrannl.github.io/Layton-Puzzles/miracle-mask.html" },
+    { name: "Azran Legacy", url: "https://ferrannl.github.io/Layton-Puzzles/azran-legacy.html" },
+  ];
+
+  modal.innerHTML = `
+    <div class="morePanel" role="dialog" aria-modal="true" aria-label="More puzzles">
+      <div class="moreTop">
+        <h2 class="moreTitle">More Layton puzzles</h2>
+        <button type="button" class="moreClose" id="moreClose" aria-label="Close">✕</button>
+      </div>
+      <div class="moreList" id="moreList"></div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  const list = modal.querySelector("#moreList");
+  list.innerHTML = "";
+  for (const item of links) {
+    const a = document.createElement("a");
+    a.className = "moreLink";
+    a.href = item.url;
+    a.target = "_self";
+    a.rel = "noopener";
+    a.innerHTML = `<span>${item.name}</span><small>→</small>`;
+    list.appendChild(a);
+  }
+
+  const open = () => {
+    modal.classList.add("open");
+    modal.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
+  };
+
+  const close = () => {
+    modal.classList.remove("open");
+    modal.setAttribute("aria-hidden", "true");
+    document.body.style.overflow = "";
+  };
+
+  triggerBtn.addEventListener("click", open);
+  modal.querySelector("#moreClose")?.addEventListener("click", close);
+
+  // Click outside panel closes
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) close();
+  });
+
+  // ESC closes
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && modal.classList.contains("open")) close();
+  });
 }
 
 /* ---------- Solved State ---------- */
@@ -114,7 +200,6 @@ function memoSaveAll(map) {
 }
 
 function memoIdFor(src) {
-  // stable-ish key per image url
   return String(src || "");
 }
 
@@ -123,7 +208,6 @@ function setActiveTool(btns, tool) {
 }
 
 function fitCanvasToBox(canvas, box, keepImageDataURL) {
-  // Preserve existing drawing by snapshotting first
   let snapshot = null;
   if (keepImageDataURL) {
     try { snapshot = canvas.toDataURL("image/png"); } catch {}
@@ -132,7 +216,6 @@ function fitCanvasToBox(canvas, box, keepImageDataURL) {
   const w = Math.max(1, Math.round(box.clientWidth));
   const h = Math.max(1, Math.round(box.clientHeight));
 
-  // Only resize if needed (resizing clears!)
   if (canvas.width !== w || canvas.height !== h) {
     canvas.width = w;
     canvas.height = h;
@@ -179,16 +262,15 @@ function installMemoOnThumb(thumbEl, imgEl, src, memoMap) {
   thumbEl.appendChild(canvas);
   thumbEl.appendChild(tools);
 
-  // make canvas match the visible image area (inside thumb padding)
   const resizeNow = (keep) => fitCanvasToBox(canvas, imgEl, keep);
 
-  // once image loads, size canvas to it
   const ensureSized = () => resizeNow(false);
   if (imgEl.complete) ensureSized();
   else imgEl.addEventListener("load", ensureSized, { once: true });
 
-  // restore saved drawing
   const key = memoIdFor(src);
+
+  // restore saved drawing
   const saved = memoMap[key];
   if (saved) {
     const img = new Image();
@@ -202,29 +284,49 @@ function installMemoOnThumb(thumbEl, imgEl, src, memoMap) {
   }
 
   // tools + state
-  let tool = "pen";
-  setActiveTool([btnPen, btnErase], tool);
+  let tool = null; // ✅ START OFF (so scrolling never accidentally draws)
+
+  const applyToolUI = () => {
+    setActiveTool([btnPen, btnErase], tool);
+
+    // If tool is OFF => canvas doesn't capture touches => scroll works
+    if (!tool) {
+      canvas.style.pointerEvents = "none";
+      canvas.style.touchAction = "auto";
+      canvas.style.cursor = "default";
+    } else {
+      canvas.style.pointerEvents = "auto";
+      canvas.style.touchAction = "none"; // drawing mode blocks scroll (intentionally)
+      canvas.style.cursor = "crosshair";
+    }
+  };
+
+  const toggleTool = (which) => {
+    tool = (tool === which) ? null : which; // tap again -> OFF
+    applyToolUI();
+  };
 
   btnPen.addEventListener("click", (e) => {
     e.preventDefault(); e.stopPropagation();
-    tool = "pen";
-    setActiveTool([btnPen, btnErase], tool);
+    toggleTool("pen");
   });
 
   btnErase.addEventListener("click", (e) => {
     e.preventDefault(); e.stopPropagation();
-    tool = "eraser";
-    setActiveTool([btnPen, btnErase], tool);
+    toggleTool("eraser");
   });
 
   btnClear.addEventListener("click", (e) => {
     e.preventDefault(); e.stopPropagation();
+    if (!tool) return; // optional: only allow clear while in drawing mode
     if (!confirm("Clear drawing on this image?")) return;
     const ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     delete memoMap[key];
     memoSaveAll(memoMap);
   });
+
+  applyToolUI();
 
   // drawing
   const ctx = canvas.getContext("2d");
@@ -244,17 +346,23 @@ function installMemoOnThumb(thumbEl, imgEl, src, memoMap) {
   };
 
   const start = (evt) => {
+    // ✅ if tool not selected, DO NOTHING (let page scroll)
+    if (!tool) return;
+
     // don't start drawing when clicking tool buttons
     if (evt.target && evt.target.closest && evt.target.closest(".memoTools")) return;
 
     drawing = true;
     const p = getPos(evt);
     lastX = p.x; lastY = p.y;
+
+    // prevent scroll ONLY when we actually start drawing
     evt.preventDefault();
   };
 
   const move = (evt) => {
-    if (!drawing) return;
+    if (!drawing || !tool) return;
+
     const p = getPos(evt);
 
     if (tool === "eraser") {
@@ -272,6 +380,8 @@ function installMemoOnThumb(thumbEl, imgEl, src, memoMap) {
     ctx.stroke();
 
     lastX = p.x; lastY = p.y;
+
+    // prevent scroll while drawing
     evt.preventDefault();
   };
 
@@ -314,7 +424,6 @@ function makeImg(src, memoMap, { cropTop=false, enableMemo=false } = {}) {
 
   wrap.appendChild(img);
 
-  // install memo overlay ONLY when enabled
   if (enableMemo) {
     installMemoOnThumb(wrap, img, src, memoMap);
   }
@@ -441,7 +550,7 @@ function renderList(puzzlesPage, impossibleMap, solvedMap, memoMap) {
     const section = document.createElement("div");
     section.className = "section";
 
-    // Puzzle images: crop FIRST image
+    // Puzzle images: crop FIRST image, memo only on SECOND image
     const puzzleImgs = p.images?.puzzle || [];
     if (puzzleImgs.length) {
       section.appendChild(sectionGrid(puzzleImgs, memoMap, { cropIndex: 0, memoIndex: 1 }));
