@@ -1,4 +1,3 @@
-
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Crimson+Pro:wght@400;600;700&display=swap');
 
 :root{
@@ -18,13 +17,16 @@
   --hint1:#F1F0C0;
   --hint2:#D0F0C7;
   --hint3:#C7F0E0;
-  --solution:#D7B187; /* ✅ CHANGED from blue to #D7B187 */
+  --solution:#D7B187;
 
   /* Pills */
   --infeasible:#BD4C04;
 
   /* Image rounding (slight!) */
   --imgRadius:6px;
+
+  /* Fixed crop amount */
+  --cropTop: 32px;
 
   /* Title outline colors */
   --titleFill:#ffffff;
@@ -37,9 +39,9 @@ html[data-theme="light"]{
   --bg:#E8E8D0;
   --panel:#EFF0DF;
 
-  /* Light accent gradient (your “reds” become #BFC88F-ish) */
-  --o1:#9eaa64;   /* deeper olive for gradient base */
-  --o2:#BFC88F;   /* requested accent */
+  /* Light accent gradient */
+  --o1:#9eaa64;
+  --o2:#BFC88F;
 
   /* Text colors */
   --text:#0d0b07;
@@ -160,12 +162,8 @@ body{
   border:1px solid color-mix(in srgb, var(--o1) 35%, rgba(0,0,0,.25));
   box-shadow: 0 8px 16px rgba(0,0,0,.12);
 }
-.themePill:hover{
-  border-color: var(--o2);
-}
-.themePill span{
-  opacity:.9;
-}
+.themePill:hover{ border-color: var(--o2); }
+.themePill span{ opacity:.9; }
 
 /* Status (you hide in JS, but keep safe) */
 .status{ display:none; }
@@ -331,13 +329,16 @@ html[data-theme="light"] .solvedBtn[data-solved="true"] .solvedDot{
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap:12px;
 }
+
 .thumb{
+  position:relative;
   border:1px solid color-mix(in srgb, var(--text) 12%, transparent);
   background: color-mix(in srgb, var(--panel) 55%, transparent);
   padding:8px;
   border-radius:12px;
   overflow:hidden;
 }
+
 img.pimg{
   width:100%;
   aspect-ratio: 4 / 3;
@@ -347,7 +348,49 @@ img.pimg{
   background: color-mix(in srgb, var(--panel) 55%, transparent);
   border:1px solid color-mix(in srgb, var(--text) 12%, transparent);
   border-radius: var(--imgRadius);
-  cursor: zoom-in;
+}
+
+/* ---- MEMO DRAW OVERLAY (simple) ---- */
+.memoCanvas{
+  position:absolute;
+  inset:8px;            /* match thumb padding */
+  border-radius: var(--imgRadius);
+  touch-action: none;   /* important for mobile drawing */
+  cursor: crosshair;
+}
+
+.memoTools{
+  position:absolute;
+  right:10px;
+  bottom:10px;
+  display:flex;
+  gap:8px;
+  z-index:3;
+}
+
+.memoBtn{
+  appearance:none;
+  border:none;
+  cursor:pointer;
+  width:40px;
+  height:40px;
+  border-radius:999px;
+  font-size:18px;
+  line-height:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background: color-mix(in srgb, var(--panel) 82%, rgba(0,0,0,.25));
+  border:1px solid color-mix(in srgb, var(--o1) 25%, transparent);
+  box-shadow: 0 8px 16px rgba(0,0,0,.18);
+  color: var(--text);
+  user-select:none;
+}
+.memoBtn:hover{ border-color: var(--o2); }
+.memoBtn.active{
+  background: linear-gradient(180deg, var(--o2), var(--o1));
+  color:#1a110a;
+  border:1px solid rgba(0,0,0,.25);
 }
 
 /* Subdetails */
@@ -527,129 +570,9 @@ img.pimg{
   font-weight:900;
 }
 
-/* =========================================================
-   LIGHTBOX + DRAW OVERLAY (THIS WAS MISSING)
-   ========================================================= */
-.lightbox{
-  position:fixed;
-  inset:0;
-  background: rgba(0,0,0,.78);
-  display:none;
-  align-items:center;
-  justify-content:center;
-  padding:18px;
-  z-index:9999;
-}
-.lightbox.open{ display:flex; }
-
-.lightboxInner{
-  width:min(1200px, 96vw);
-  max-height:90vh;
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-  align-items:center;
-}
-
-/* Stage wrapper (image + canvas overlay) */
-.lightboxStage{
-  position:relative;
-  width:min(1200px, 96vw);
-  max-height:82vh;
-  border-radius:12px;
-  overflow:hidden;
-  border:1px solid rgba(255,255,255,.18);
-  background: rgba(10,7,5,.6);
-}
-
-/* Image inside stage */
-.lightboxStage img{
-  width:100%;
-  height:auto;
-  max-height:82vh;
-  object-fit:contain;
-  display:block;
-  cursor: zoom-out;
-}
-
-/* Drawing canvas overlay */
-#drawCanvas{
-  position:absolute;
-  inset:0;
-  width:100%;
-  height:100%;
-  touch-action:none; /* important for iOS/Android drawing */
-  cursor: crosshair;
-}
-
-/* Subtle tiny tool buttons */
-.drawTools{
-  position:absolute;
-  right:10px;
-  bottom:10px;
-  display:flex;
-  gap:8px;
-  opacity:.55;
-  transition: opacity 160ms ease;
-  user-select:none;
-}
-.lightboxStage:hover .drawTools{ opacity:.9; }
-
-.toolBtn{
-  appearance:none;
-  border:none;
-  cursor:pointer;
-  padding:7px 10px;
-  border-radius:999px;
-  font-weight:900;
-  font-size:12px;
-  color: rgba(255,255,255,.95);
-  background: rgba(0,0,0,.35);
-  border:1px solid rgba(255,255,255,.18);
-  text-shadow:
-    -1px -1px 0 rgba(0,0,0,.95),
-     1px -1px 0 rgba(0,0,0,.95),
-    -1px  1px 0 rgba(0,0,0,.95),
-     1px  1px 0 rgba(0,0,0,.95);
-}
-.toolBtn.active{
-  background: rgba(255,255,255,.18);
-  border-color: rgba(255,255,255,.35);
-}
-
-.lightboxHint{
-  color:rgba(255,255,255,.9);
-  font-weight:900;
-  font-size:12px;
-  text-shadow:
-    -1px -1px 0 rgba(0,0,0,.95),
-     1px -1px 0 rgba(0,0,0,.95),
-    -1px  1px 0 rgba(0,0,0,.95),
-     1px  1px 0 rgba(0,0,0,.95);
-}
-
-/* Light theme lightbox tuning */
-html[data-theme="light"] .lightboxStage{
-  border:1px solid rgba(0,0,0,.15);
-  background: rgba(255,255,255,.55);
-}
-html[data-theme="light"] .toolBtn{
-  color: rgba(0,0,0,.90);
-  background: rgba(255,255,255,.35);
-  border:1px solid rgba(0,0,0,.18);
-  text-shadow:
-    -1px -1px 0 rgba(255,255,255,.95),
-     1px -1px 0 rgba(255,255,255,.95),
-    -1px  1px 0 rgba(255,255,255,.95),
-     1px  1px 0 rgba(255,255,255,.95);
-}
-html[data-theme="light"] .lightboxHint{
-  color:#fff;
-}
-
-/* Responsive tweaks */
 @media (max-width: 700px){
   .brand{ font-size:24px; }
   .sub{ font-size:15px; }
   .pagerPill{ width:56px; }
+  .memoBtn{ width:38px; height:38px; }
 }
