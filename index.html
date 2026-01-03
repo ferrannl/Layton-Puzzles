@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="en">
 <head>
@@ -41,25 +40,6 @@
   </main>
 
   <div class="pager bottom" id="pagerBottom" aria-label="Page navigation bottom"></div>
-
-  <!-- Image lightbox + drawing -->
-  <div id="lightbox" class="lightbox" aria-hidden="true">
-    <div class="lightboxInner" role="dialog" aria-modal="true" aria-label="Image preview">
-      <div class="lightboxStage" id="lightboxStage">
-        <img id="lightboxImg" alt="Preview" />
-        <canvas id="drawCanvas" aria-label="Draw overlay"></canvas>
-
-        <!-- subtle tiny tools (no HUD) -->
-        <div class="drawTools" aria-hidden="false">
-          <button type="button" class="toolBtn" id="toolPen" title="Pen (P)">Pen</button>
-          <button type="button" class="toolBtn" id="toolEraser" title="Eraser (E)">Erase</button>
-          <button type="button" class="toolBtn" id="toolClear" title="Clear (C)">Clear</button>
-        </div>
-      </div>
-
-      <div class="lightboxHint">Draw: drag • Pen=P • Erase=E • Clear=C • ESC closes</div>
-    </div>
-  </div>
 
   <script src="script.js"></script>
 </body>
