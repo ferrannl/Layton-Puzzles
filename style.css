@@ -357,6 +357,7 @@ img.pimg{
   border-radius: var(--imgRadius);
   touch-action: none;   /* important for mobile drawing */
   cursor: crosshair;
+  pointer-events: none;
 }
 
 .memoTools{
