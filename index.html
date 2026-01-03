@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -18,17 +19,18 @@
       <div class="topbarTitle">
         <h1 class="brand">Layton’s Puzzles</h1>
         <p class="sub">
-          Browse puzzles, use hints, and reveal solutions.
+          Browse puzzles, open hints left-to-right, then reveal the solution.
           Tap images to zoom. Mark puzzles as solved when you’re done.
         </p>
       </div>
 
       <div class="controls">
-        <input id="q" type="search" placeholder="Search by #number or title…" />
+        <input id="q" type="search" placeholder="Search by # or title… e.g. 63, village, picarats" />
         <label class="chk">
           <input id="toggleAllSolutions" type="checkbox" />
-          Auto-open All Solutions
+          Auto-open Solutions
         </label>
+        <!-- Theme button is injected by JS -->
       </div>
     </div>
   </header>
@@ -38,14 +40,24 @@
     <div id="list" class="list"></div>
   </main>
 
-  <!-- Full-width bottom pager -->
   <div class="pager bottom" id="pagerBottom" aria-label="Page navigation bottom"></div>
 
-  <!-- Image lightbox -->
+  <!-- Image lightbox + drawing -->
   <div id="lightbox" class="lightbox" aria-hidden="true">
     <div class="lightboxInner" role="dialog" aria-modal="true" aria-label="Image preview">
-      <img id="lightboxImg" alt="Preview" />
-      <div class="lightboxHint">Click anywhere to close</div>
+      <div class="lightboxStage" id="lightboxStage">
+        <img id="lightboxImg" alt="Preview" />
+        <canvas id="drawCanvas" aria-label="Draw overlay"></canvas>
+
+        <!-- subtle tiny tools (no HUD) -->
+        <div class="drawTools" aria-hidden="false">
+          <button type="button" class="toolBtn" id="toolPen" title="Pen (P)">Pen</button>
+          <button type="button" class="toolBtn" id="toolEraser" title="Eraser (E)">Erase</button>
+          <button type="button" class="toolBtn" id="toolClear" title="Clear (C)">Clear</button>
+        </div>
+      </div>
+
+      <div class="lightboxHint">Draw: drag • Pen=P • Erase=E • Clear=C • ESC closes</div>
     </div>
   </div>
 
