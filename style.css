@@ -1,5 +1,327 @@
 
-/* Lightbox */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Crimson+Pro:wght@400;600;700&display=swap');
+
+/* =========================================================
+   ROOT – DARK THEME (default vars, light overrides below)
+   ========================================================= */
+:root{
+  /* Accent gradient (dark) */
+  --o1:#b62c00;
+  --o2:#ff5a2a;
+
+  /* Base colors */
+  --bg:#16100b;
+  --panel:#1c140e;
+  --text:#ffffff;
+  --muted:rgba(255,255,255,.78);
+
+  --shadow: 0 10px 22px rgba(0,0,0,.25);
+
+  /* Sections */
+  --hint1:#F1F0C0;
+  --hint2:#D0F0C7;
+  --hint3:#C7F0E0;
+  --solution:#D7B187;
+
+  /* Pills */
+  --infeasible:#BD4C04;
+
+  /* Title stroke */
+  --titleFill:#ffffff;
+  --titleStroke: rgba(0,0,0,.95);
+
+  /* Image rounding */
+  --imgRadius:6px;
+}
+
+/* =========================================================
+   LIGHT THEME OVERRIDES
+   ========================================================= */
+html[data-theme="light"]{
+  --bg:#E8E8D0;
+  --panel:#EFF0DF;
+
+  /* Softer greenish-red accent */
+  --o1:#9eaa64;
+  --o2:#BFC88F;
+
+  --text:#0d0b07;
+  --muted:rgba(0,0,0,.62);
+
+  --titleFill:#000000;
+  --titleStroke: rgba(255,255,255,.98);
+}
+
+/* =========================================================
+   GLOBAL
+   ========================================================= */
+*{ box-sizing:border-box }
+html,body{ height:100% }
+
+body{
+  margin:0;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+  color:var(--text);
+  background:
+    radial-gradient(1200px 700px at 10% -10%, color-mix(in srgb, var(--o2) 20%, transparent), transparent 60%),
+    radial-gradient(900px 600px at 90% 0%, color-mix(in srgb, var(--o1) 18%, transparent), transparent 60%),
+    var(--bg);
+}
+
+/* =========================================================
+   LAYOUT
+   ========================================================= */
+.wrap{
+  max-width:1180px;
+  margin:0 auto;
+  padding:18px;
+}
+
+/* =========================================================
+   TOP BAR
+   ========================================================= */
+.topbar{
+  position:relative;
+  z-index:20;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--panel) 92%, transparent),
+    color-mix(in srgb, var(--panel) 84%, transparent)
+  );
+  border-bottom:3px solid var(--o1);
+  box-shadow: 0 8px 18px rgba(0,0,0,.22);
+}
+
+.brand{
+  margin:4px 0 2px;
+  font-family:"Cinzel", serif;
+  font-weight:800;
+  letter-spacing:.04em;
+  font-size:28px;
+}
+
+.sub{
+  margin:0 0 10px;
+  color:var(--muted);
+  font-family:"Crimson Pro", serif;
+  font-size:16px;
+}
+
+.controls{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+
+#q{
+  flex:1;
+  min-width:240px;
+  padding:11px 12px;
+  border-radius:12px;
+  border:2px solid color-mix(in srgb, var(--o1) 35%, rgba(0,0,0,.25));
+  background: color-mix(in srgb, var(--panel) 65%, transparent);
+  color:var(--text);
+  outline:none;
+}
+#q:focus{
+  border-color: var(--o1);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--o1) 30%, transparent);
+}
+
+.chk{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  color:var(--muted);
+  font-size:13px;
+}
+
+/* =========================================================
+   STATUS (hidden)
+   ========================================================= */
+.status{ display:none }
+
+/* =========================================================
+   PUZZLE LIST
+   ========================================================= */
+.list{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  padding-bottom:18px;
+}
+
+.puzzle{
+  border:2px solid color-mix(in srgb, var(--o1) 20%, rgba(126,71,22,.55));
+  border-radius:12px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--panel) 92%, transparent),
+    color-mix(in srgb, var(--panel) 82%, transparent)
+  );
+  overflow:hidden;
+  box-shadow: var(--shadow);
+}
+
+.puzzle > summary{
+  cursor:pointer;
+  list-style:none;
+  padding:12px 14px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.puzzle > summary::-webkit-details-marker{ display:none }
+
+.badge{
+  padding:4px 10px;
+  border-radius:999px;
+  background: linear-gradient(180deg, var(--o2), var(--o1));
+  color:#1a110a;
+  font-weight:900;
+  font-size:12px;
+}
+
+.title{
+  font-size:15px;
+  font-weight:900;
+  color:var(--titleFill);
+  text-shadow:
+    -1px -1px 0 var(--titleStroke),
+     1px -1px 0 var(--titleStroke),
+    -1px  1px 0 var(--titleStroke),
+     1px  1px 0 var(--titleStroke),
+     0 2px 0 color-mix(in srgb, var(--titleStroke) 70%, transparent);
+}
+
+.meta{
+  margin-left:auto;
+  display:flex;
+  gap:10px;
+  align-items:center;
+}
+
+.impossible{
+  padding:4px 10px;
+  border-radius:999px;
+  background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(0,0,0,.10)), var(--infeasible);
+  color:#fff;
+  font-weight:900;
+  font-size:12px;
+}
+
+/* =========================================================
+   SECTION
+   ========================================================= */
+.section{
+  padding:12px 14px 16px;
+  background: color-mix(in srgb, var(--panel) 65%, transparent);
+}
+
+/* =========================================================
+   IMAGES
+   ========================================================= */
+.grid{
+  display:grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap:12px;
+}
+
+.thumb{
+  padding:8px;
+  border-radius:12px;
+  background: color-mix(in srgb, var(--panel) 55%, transparent);
+}
+
+img.pimg{
+  width:100%;
+  height:auto;
+  aspect-ratio:4/3;
+  object-fit:contain;
+  display:block;
+  border-radius:var(--imgRadius);
+  cursor:zoom-in;
+}
+
+/* =========================================================
+   SUBDETAILS (Hints / Solution)
+   ========================================================= */
+.subdetails{
+  border-radius:12px;
+  overflow:hidden;
+  background: color-mix(in srgb, var(--panel) 55%, transparent);
+}
+
+.subdetails > summary{
+  cursor:pointer;
+  padding:10px 12px;
+  font-weight:900;
+  color:#fff;
+  text-shadow:
+    -1px -1px 0 #000,
+     1px -1px 0 #000,
+    -1px  1px 0 #000,
+     1px  1px 0 #000;
+}
+.subdetails > summary::-webkit-details-marker{ display:none }
+
+.subdetails .inner{
+  padding:10px 12px;
+}
+
+.subdetails.hint1 > summary{ background:var(--hint1) }
+.subdetails.hint2 > summary{ background:var(--hint2) }
+.subdetails.hint3 > summary{ background:var(--hint3) }
+.subdetails.solution > summary{ background:var(--solution) }
+
+/* =========================================================
+   HINTS ROW
+   ========================================================= */
+.hintsRow{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+  margin-top:10px;
+}
+
+.hintsRow .subdetails{
+  flex:1 1 260px;
+}
+
+/* =========================================================
+   PAGER
+   ========================================================= */
+.pager{
+  width:100%;
+  padding:14px 18px;
+  border-top:2px solid color-mix(in srgb, var(--o1) 35%, transparent);
+  background: color-mix(in srgb, var(--panel) 55%, transparent);
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  align-items:center;
+}
+
+.pagerRow{
+  display:flex;
+  gap:10px;
+  justify-content:center;
+}
+
+.pbtn{
+  padding:10px 14px;
+  border-radius:999px;
+  font-weight:900;
+  border:none;
+  cursor:pointer;
+  background: color-mix(in srgb, var(--panel) 80%, transparent);
+  color:var(--text);
+}
+
+/* =========================================================
+   LIGHTBOX + DRAWING
+   ========================================================= */
 .lightbox{
   position:fixed;
   inset:0;
@@ -7,97 +329,46 @@
   display:none;
   align-items:center;
   justify-content:center;
-  padding:18px;
   z-index:9999;
 }
-.lightbox.open{ display:flex; }
+.lightbox.open{ display:flex }
 
 .lightboxInner{
   width:min(1200px, 96vw);
   max-height:90vh;
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-  align-items:center;
 }
 
-/* stage contains image + canvas overlay */
 .lightboxStage{
   position:relative;
-  width:100%;
-  max-height:82vh;
   border-radius:12px;
-  border:1px solid rgba(255,255,255,.18);
-  background: rgba(10,7,5,.6);
   overflow:hidden;
 }
 
 .lightboxStage img{
   width:100%;
-  height:auto;
   max-height:82vh;
   object-fit:contain;
-  display:block;
-  cursor: zoom-out;
 }
 
-/* canvas sits on top of the image */
 #drawCanvas{
   position:absolute;
   inset:0;
-  width:100%;
-  height:100%;
-  touch-action:none; /* important for drawing on mobile */
-  cursor: crosshair;
+  touch-action:none;
 }
 
-/* subtle mini tools */
 .drawTools{
   position:absolute;
   right:10px;
   bottom:10px;
   display:flex;
   gap:8px;
-  opacity:.55;
-  transition: opacity 160ms ease;
-  user-select:none;
+  opacity:.6;
 }
-.lightboxStage:hover .drawTools{ opacity:.9; }
 
 .toolBtn{
-  appearance:none;
-  border:none;
-  cursor:pointer;
-  padding:7px 10px;
+  padding:6px 10px;
   border-radius:999px;
-  font-weight:900;
   font-size:12px;
-  color: rgba(255,255,255,.95);
-  background: rgba(0,0,0,.35);
-  border:1px solid rgba(255,255,255,.18);
-  text-shadow:
-    -1px -1px 0 rgba(0,0,0,.95),
-     1px -1px 0 rgba(0,0,0,.95),
-    -1px  1px 0 rgba(0,0,0,.95),
-     1px  1px 0 rgba(0,0,0,.95);
-}
-.toolBtn.active{
-  background: rgba(255,255,255,.18);
-  border-color: rgba(255,255,255,.35);
-}
-
-/* light theme: keep it subtle */
-html[data-theme="light"] .lightboxStage{
-  border:1px solid rgba(0,0,0,.18);
-  background: rgba(255,255,255,.55);
-}
-html[data-theme="light"] .toolBtn{
-  color: rgba(0,0,0,.85);
-  background: rgba(255,255,255,.35);
-  border:1px solid rgba(0,0,0,.18);
-  text-shadow:
-    -1px -1px 0 rgba(255,255,255,.95),
-     1px -1px 0 rgba(255,255,255,.95),
-    -1px  1px 0 rgba(255,255,255,.95),
-     1px  1px 0 rgba(255,255,255,.95);
+  font-weight:900;
+  cursor:pointer;
 }
