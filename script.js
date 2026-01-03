@@ -302,7 +302,7 @@ function installMemoOnThumb(thumbEl, imgEl, src, memoMap) {
 
 /* ---------- Images ---------- */
 
-function makeImg(src, memoMap, { cropTop=false } = {}) {
+function makeImg(src, memoMap, { cropTop=false, enableMemo=false } = {}) {
   const wrap = document.createElement("div");
   wrap.className = "thumb" + (cropTop ? " cropTop" : "");
 
@@ -314,18 +314,21 @@ function makeImg(src, memoMap, { cropTop=false } = {}) {
 
   wrap.appendChild(img);
 
-  // install memo overlay
-  installMemoOnThumb(wrap, img, src, memoMap);
+  // install memo overlay ONLY when enabled
+  if (enableMemo) {
+    installMemoOnThumb(wrap, img, src, memoMap);
+  }
 
   return wrap;
 }
 
-function sectionGrid(urls, memoMap, { cropIndex=null } = {}) {
+function sectionGrid(urls, memoMap, { cropIndex=null, memoIndex=null } = {}) {
   const grid = document.createElement("div");
   grid.className = "grid";
 
   (urls || []).forEach((u, idx) => {
-    grid.appendChild(makeImg(u, memoMap, { cropTop: cropIndex === idx }));
+    const enableMemo = (memoIndex === idx);
+    grid.appendChild(makeImg(u, memoMap, { cropTop: cropIndex === idx, enableMemo }));
   });
 
   return grid;
@@ -441,7 +444,7 @@ function renderList(puzzlesPage, impossibleMap, solvedMap, memoMap) {
     // Puzzle images: crop FIRST image
     const puzzleImgs = p.images?.puzzle || [];
     if (puzzleImgs.length) {
-      section.appendChild(sectionGrid(puzzleImgs, memoMap, { cropIndex: 0 }));
+      section.appendChild(sectionGrid(puzzleImgs, memoMap, { cropIndex: 0, memoIndex: 1 }));
     }
 
     // Hints
