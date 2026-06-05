@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Layton's Puzzle Archive: Azran Legacy</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body data-game-id="azran-legacy" data-game-title="Azran Legacy Puzzles" data-json-file="data/azran-legacy.json">
+
+  <header class="topbar">
+    <div class="wrap topbarInner">
+      <div class="topbarTitle">
+        <h1 class="brand">Azran Legacy Puzzles</h1>
+        <p class="sub">Browse puzzles, open hints, draw solutions, and track completion progress.</p>
+      </div>
+      <div class="controls">
+        <input id="q" type="search" placeholder="Search by #number or title…" />
+        <label class="chk">
+          <input id="toggleAllSolutions" type="checkbox" />
+          Auto-open Solutions
+        </label>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div id="status" class="status">Initializing interactive puzzle grid...</div>
+    <div id="list" class="list"></div>
+  </main>
+
+  <footer class="pager bottom" id="pagerBottom"></footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
