@@ -1,4 +1,3 @@
-
 const $ = (sel) => document.querySelector(sel);
 
 const PAGE_SIZE = 5;
@@ -92,14 +91,14 @@ function installMorePuzzlesModal(triggerBtn){
   modal.id = "moreModal";
   modal.setAttribute("aria-hidden", "true");
 
-  // Placeholder URLs (your pattern). Change later whenever you want.
+  // Relative links pointing to your separate individual html template designs
   const links = [
-    { name: "Curious Village (the one you're on)", url: "https://ferrannl.github.io/Layton-Puzzles/" },
-    { name: "Diabolical Box", url: "https://ferrannl.github.io/Layton-Puzzles/diabolical-box.html" },
-    { name: "Unwound Future", url: "https://ferrannl.github.io/Layton-Puzzles/unwound-future.html" },
-    { name: "Last Specter", url: "https://ferrannl.github.io/Layton-Puzzles/last-specter.html" },
-    { name: "Miracle Mask", url: "https://ferrannl.github.io/Layton-Puzzles/miracle-mask.html" },
-    { name: "Azran Legacy", url: "https://ferrannl.github.io/Layton-Puzzles/azran-legacy.html" },
+    { name: "Curious Village", url: "curious-village.html" },
+    { name: "Diabolical Box", url: "diabolical-box.html" },
+    { name: "Unwound Future", url: "unwound-future.html" },
+    { name: "Last Specter", url: "last-specter.html" },
+    { name: "Miracle Mask", url: "miracle-mask.html" },
+    { name: "Azran Legacy", url: "azran-legacy.html" },
   ];
 
   modal.innerHTML = `
@@ -154,7 +153,10 @@ function installMorePuzzlesModal(triggerBtn){
 
 /* ---------- Solved State ---------- */
 
-const SOLVED_KEY = "layton_solved_v1";
+// Dynamically keys local storage names so progress data stays separated by game ID
+const GAME_ID_ATTR = document.body.dataset.gameId || "curious-village";
+const SOLVED_KEY = `layton_solved_${GAME_ID_ATTR}_v1`;
+const MEMO_KEY = `layton_memo_${GAME_ID_ATTR}_v1`;
 
 function loadSolved() {
   try {
@@ -181,8 +183,6 @@ function setSolved(pid, val, solvedMap) {
 }
 
 /* ---------- Memo Drawing (very simple) ---------- */
-
-const MEMO_KEY = "layton_memo_v1";
 
 function memoLoadAll() {
   try {
@@ -782,9 +782,10 @@ async function main() {
 
   if (els.status) els.status.style.display = "none";
 
+  // ✅ ADJUSTMENT: Dynamically locate database assets based on HTML custom metadata tags
   const BASE = new URL(".", window.location.href).href;
-  const puzzlesUrl = BASE + "puzzles.json";
-  const impossibleUrl = BASE + "impossible.json";
+  const puzzlesUrl = BASE + (document.body.dataset.jsonFile || "data/curious-village.json");
+  const impossibleUrl = BASE + (document.body.dataset.impossibleFile || "data/impossible.json");
 
   const solvedMap = loadSolved();
   const memoMap = memoLoadAll();
