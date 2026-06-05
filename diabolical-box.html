@@ -3,45 +3,27 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Layton's Puzzles: Diabolical Box</title>
-
-  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-  <link rel="manifest" href="/site.webmanifest">
-
-  <!-- Uses your existing CSS styles -->
+  <title>Layton Archive: Diabolical Box</title>
   <link rel="stylesheet" href="style.css" />
 </head>
-<body>
+<body data-game="diabolical-box">
   <header class="topbar">
     <div class="wrap topbarInner">
       <div class="topbarTitle">
         <h1 class="brand">Diabolical Box Puzzles</h1>
-        <p class="sub">
-          Browse puzzles, open hints, and reveal the solutions.
-          Draw on images and mark puzzles as solved when you’re done.
-        </p>
+        <p class="sub"><a href="index.html">⬅ Back to Curious Village</a> | <a href="unwound-future.html">➡ Next: Unwound Future</a></p>
       </div>
-
       <div class="controls">
         <input id="q" type="search" placeholder="Search by #number or title…" />
-        <label class="chk">
-          <input id="toggleAllSolutions" type="checkbox" />
-          Auto-open Solutions
-        </label>
-        <!-- Theme button and "More puzzles" modal pill are injected by JS -->
+        <label class="chk"><input id="toggleAllSolutions" type="checkbox" /> Auto-open Solutions</label>
       </div>
     </div>
   </header>
-
   <main class="wrap">
     <div id="status" class="status">Loading puzzles…</div>
     <div id="list" class="list"></div>
   </main>
-
-  <div class="pager bottom" id="pagerBottom" aria-label="Page navigation bottom"></div>
-
+  <div class="pager bottom" id="pagerBottom"></div>
   <script src="script.js"></script>
 </body>
 </html>
