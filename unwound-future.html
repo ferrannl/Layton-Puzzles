@@ -3,17 +3,20 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Layton's Puzzle Archive: Unwound Future</title>
+  <title>Layton Archive: Unwound Future</title>
   <link rel="stylesheet" href="style.css" />
 </head>
-<body data-game-id="unwound-future" data-game-title="Unwound Future Puzzles" data-json-file="data/unwound-future.json">
-
+<body data-game="unwound-future">
   <header class="topbar">
     <div class="wrap topbarInner">
       <div class="topbarTitle">
         <h1 class="brand">Unwound Future Puzzles</h1>
-        <p class="sub">Browse puzzles, open hints, draw solutions, and track completion progress.</p>
+        <p class="sub">
+          Browse puzzles, open hints, and reveal the solutions.
+          Draw on images and mark puzzles as solved when you’re done.
+        </p>
       </div>
+
       <div class="controls">
         <input id="q" type="search" placeholder="Search by #number or title…" />
         <label class="chk">
@@ -25,12 +28,12 @@
   </header>
 
   <main class="wrap">
-    <div id="status" class="status">Initializing interactive puzzle grid...</div>
+    <div id="status" class="status">Loading puzzles…</div>
     <div id="list" class="list"></div>
   </main>
 
-  <footer class="pager bottom" id="pagerBottom"></footer>
+  <div class="pager bottom" id="pagerBottom" aria-label="Page navigation bottom"></div>
 
-  <script src="app.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
