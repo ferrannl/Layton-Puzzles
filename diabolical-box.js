@@ -782,8 +782,8 @@ async function main() {
   if (els.status) els.status.style.display = "none";
 
   const BASE = new URL(".", window.location.href).href;
-  const puzzlesUrl = BASE + "puzzles.json";
-  const impossibleUrl = BASE + "impossible.json";
+  const puzzlesUrl = BASE + "puzzles2.json";
+  const impossibleUrl = BASE + "impossible2.json";
 
   const solvedMap = loadSolved();
   const memoMap = memoLoadAll();
