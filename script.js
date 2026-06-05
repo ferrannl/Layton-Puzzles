@@ -1,3 +1,4 @@
+
 const $ = (sel) => document.querySelector(sel);
 
 const PAGE_SIZE = 5;
@@ -91,14 +92,14 @@ function installMorePuzzlesModal(triggerBtn){
   modal.id = "moreModal";
   modal.setAttribute("aria-hidden", "true");
 
-  // Relative URLs mapping across your GitHub Pages environment
+  // Placeholder URLs (your pattern). Change later whenever you want.
   const links = [
-    { name: "Curious Village", url: "index.html" },
-    { name: "Diabolical Box", url: "diabolical-box.html" },
-    { name: "Unwound Future", url: "unwound-future.html" },
-    { name: "Last Specter", url: "last-specter.html" },
-    { name: "Miracle Mask", url: "miracle-mask.html" },
-    { name: "Azran Legacy", url: "azran-legacy.html" },
+    { name: "Curious Village (the one you're on)", url: "https://ferrannl.github.io/Layton-Puzzles/" },
+    { name: "Diabolical Box", url: "https://ferrannl.github.io/Layton-Puzzles/diabolical-box.html" },
+    { name: "Unwound Future", url: "https://ferrannl.github.io/Layton-Puzzles/unwound-future.html" },
+    { name: "Last Specter", url: "https://ferrannl.github.io/Layton-Puzzles/last-specter.html" },
+    { name: "Miracle Mask", url: "https://ferrannl.github.io/Layton-Puzzles/miracle-mask.html" },
+    { name: "Azran Legacy", url: "https://ferrannl.github.io/Layton-Puzzles/azran-legacy.html" },
   ];
 
   modal.innerHTML = `
@@ -779,18 +780,10 @@ function buildPager(container, state) {
 async function main() {
   installThemeToggle();
 
-  if (els.status) els.status.style.display = "block";
+  if (els.status) els.status.style.display = "none";
 
-  // 1. Check body attribute for game file differentiation
-  const gameKey = document.body.getAttribute("data-game") || "curious-village";
-  
   const BASE = new URL(".", window.location.href).href;
-  
-  // Curious Village stays on your legacy route, others pull from their custom data/ files
-  const puzzlesUrl = gameKey === "curious-village" 
-    ? BASE + "puzzles.json" 
-    : BASE + `data/${gameKey}.json`;
-    
+  const puzzlesUrl = BASE + "puzzles.json";
   const impossibleUrl = BASE + "impossible.json";
 
   const solvedMap = loadSolved();
@@ -799,13 +792,8 @@ async function main() {
   let puzzlesData;
   try {
     puzzlesData = await fetchJson(puzzlesUrl);
-    if (els.status) els.status.style.display = "none";
   } catch (e) {
     console.error(e);
-    if (els.status) {
-      els.status.textContent = `Error loading puzzles for game layout [${gameKey}]`;
-      els.status.style.color = "red";
-    }
     return;
   }
 
