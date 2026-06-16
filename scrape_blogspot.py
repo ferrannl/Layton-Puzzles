@@ -1,15 +1,73 @@
 #!/usr/bin/env python3
+import argparse
 import json
 import re
 import time
 from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
+from urllib.parse import urljoin, urlparse
 
 import requests
 from bs4 import BeautifulSoup, Tag, NavigableString
 
-OUT_JSON = Path("puzzles.json")
+OUT_DIR = Path("data")
+DEFAULT_GAME = "curious-village"
+
+GAME_CONFIGS = {
+    "curious-village": {
+        "title": "Curious Village",
+        "host": "professorlaytonwalkthrough.blogspot.com",
+        "seeds": [
+            "https://professorlaytonwalkthrough.blogspot.com/",
+            "https://professorlaytonwalkthrough.blogspot.com/2008/02/puzzle001.html",
+        ],
+        "prefix": "https://professorlaytonwalkthrough.blogspot.com/",
+    },
+    "diabolical-box": {
+        "title": "Diabolical Box",
+        "host": "professorlayton2walkthrough.blogspot.com",
+        "seeds": [
+            "https://professorlayton2walkthrough.blogspot.com/",
+            "https://professorlayton2walkthrough.blogspot.com/2008/11/puzzle002.html",
+        ],
+        "prefix": "https://professorlayton2walkthrough.blogspot.com/",
+    },
+    "unwound-future": {
+        "title": "Unwound Future",
+        "host": "professorlayton3walkthrough.blogspot.com",
+        "seeds": [
+            "https://professorlayton3walkthrough.blogspot.com/",
+            "https://professorlayton3walkthrough.blogspot.com/2009/01/puzzle002.html",
+        ],
+        "prefix": "https://professorlayton3walkthrough.blogspot.com/",
+    },
+    "last-specter": {
+        "title": "Last Specter",
+        "host": "professorlayton4walkthrough.blogspot.com",
+        "seeds": [
+            "https://professorlayton4walkthrough.blogspot.com/",
+            "https://professorlayton4walkthrough.blogspot.com/2010/01/puzzle004.html",
+        ],
+        "prefix": "https://professorlayton4walkthrough.blogspot.com/",
+    },
+    "miracle-mask": {
+        "title": "Miracle Mask",
+        "host": "professorlayton5walkthrough.blogspot.com",
+        "seeds": [
+            "https://professorlayton5walkthrough.blogspot.com/",
+        ],
+        "prefix": "https://professorlayton5walkthrough.blogspot.com/",
+    },
+    "azran-legacy": {
+        "title": "Azran Legacy",
+        "host": "professorlayton6walkthrough.blogspot.com",
+        "seeds": [
+            "https://professorlayton6walkthrough.blogspot.com/",
+        ],
+        "prefix": "https://professorlayton6walkthrough.blogspot.com/",
+    },
+}
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (compatible; LaytonScraper/3.4; +github-actions)",
@@ -19,11 +77,6 @@ HEADERS = {
 TIMEOUT = 30
 SLEEP_SECONDS = 1.1
 MAX_PUZZLES = 200  # you can set 20/30 while testing
-
-SEEDS = [
-    "https://professorlaytonwalkthrough.blogspot.com/2008/02/puzzle001.html",
-    "https://professorlaytonwalkthrough.blogspot.com/",
-]
 
 SECTION_KEYS = ["puzzle", "hint1", "hint2", "hint3", "solution"]
 
@@ -132,9 +185,9 @@ def fetch_with_fallback(session: requests.Session, url: str) -> Tuple[int, str, 
     except requests.RequestException as e:
         return 0, f"ERROR: {e}", "error"
 
-def discover_puzzle_urls(session: requests.Session) -> List[str]:
+def discover_puzzle_urls(session: requests.Session, host: str, seeds: List[str]) -> List[str]:
     found: Set[str] = set()
-    for seed in SEEDS:
+    for seed in seeds:
         code, html, mode = fetch_with_fallback(session, seed)
         print(f"[seed] {seed} -> {code} ({mode})")
         if code != 200 or not html:
@@ -142,10 +195,12 @@ def discover_puzzle_urls(session: requests.Session) -> List[str]:
         soup = BeautifulSoup(html, "html.parser")
         for a in soup.find_all("a", href=True):
             href = a["href"]
-            if "professorlaytonwalkthrough.blogspot.com" not in href:
+            full_url = urljoin(seed, href)
+            parsed = urlparse(full_url)
+            if not parsed.netloc.endswith(host):
                 continue
-            if re.search(r"/puzzle\d{3}\.html$", href):
-                found.add(href)
+            if re.search(r"/puzzle\d{3}\.html$", parsed.path):
+                found.add(full_url)
         time.sleep(0.25)
     urls = sorted(found)
     print(f"Discovered {len(urls)} puzzle links.")
@@ -293,43 +348,83 @@ def scrape_one(session: requests.Session, url: str) -> Optional[Puzzle]:
         images=images,
     )
 
+def make_output_filename(slug: str) -> Path:
+    return OUT_DIR / f"{slug}.json"
+
+
+def make_impossible_filename(slug: str) -> Path:
+    return OUT_DIR / f"{slug}-impossible.json"
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Scrape Professor Layton blogspot walkthroughs into per-game JSON files."
+    )
+    parser.add_argument(
+        "games",
+        nargs="*",
+        choices=list(GAME_CONFIGS.keys()),
+        help="One or more game slugs to scrape. If omitted, defaults to curious-village.",
+    )
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Scrape all configured games.",
+    )
+    return parser.parse_args()
+
+
+def ensure_impossible_file(slug: str) -> None:
+    path = make_impossible_filename(slug)
+    if not path.exists():
+        path.write_text("{}\n", encoding="utf-8")
+
+
 def main():
+    args = parse_args()
+    OUT_DIR.mkdir(exist_ok=True)
+    games = list(GAME_CONFIGS.keys()) if args.all else (args.games or [DEFAULT_GAME])
+
     with requests.Session() as session:
-        urls = discover_puzzle_urls(session)
+        for slug in games:
+            config = GAME_CONFIGS[slug]
+            print(f"\n=== Scraping {config['title']} ({slug}) ===")
+            urls = discover_puzzle_urls(session, config["host"], config["seeds"])
 
-        if not urls:
-            print("No links discovered; fallback sequential 001..200")
-            urls = [
-                f"https://professorlaytonwalkthrough.blogspot.com/2008/02/puzzle{n:03d}.html"
-                for n in range(1, 201)
-            ]
+            if not urls:
+                print("No links discovered; fallback sequential 001..200")
+                urls = [
+                    f"{config['prefix']}puzzle{n:03d}.html"
+                    for n in range(1, 201)
+                ]
 
-        puzzles: List[Puzzle] = []
-        for url in urls:
-            if len(puzzles) >= MAX_PUZZLES:
-                break
+            puzzles: List[Puzzle] = []
+            for url in urls:
+                if len(puzzles) >= MAX_PUZZLES:
+                    break
 
-            p = scrape_one(session, url)
-            if p:
-                puzzles.append(p)
-                img_count = sum(len(v) for v in p.images.values())
-                print(f"  + OK #{p.id:03d} imgs={img_count}")
+                p = scrape_one(session, url)
+                if p:
+                    puzzles.append(p)
+                    img_count = sum(len(v) for v in p.images.values())
+                    print(f"  + OK #{p.id:03d} imgs={img_count}")
 
-            time.sleep(SLEEP_SECONDS)
+                time.sleep(SLEEP_SECONDS)
 
-    puzzles = sorted(puzzles, key=lambda x: x.id)
+            puzzles = sorted(puzzles, key=lambda x: x.id)
+            payload = {
+                "generated_at_unix": int(time.time()),
+                "count": len(puzzles),
+                "puzzles": [asdict(p) for p in puzzles],
+            }
 
-    payload = {
-        "generated_at_unix": int(time.time()),
-        "count": len(puzzles),
-        "puzzles": [asdict(p) for p in puzzles],
-    }
+            out_path = make_output_filename(slug)
+            out_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+            print(f"\nWrote {len(puzzles)} puzzles to {out_path}")
 
-    OUT_JSON.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
-    print(f"\nWrote {len(puzzles)} puzzles to {OUT_JSON}")
-
-    if len(puzzles) == 0:
-        print("WARNING: 0 puzzles scraped. Likely blocked HTML even via proxy.")
+            ensure_impossible_file(slug)
+            if len(puzzles) == 0:
+                print("WARNING: 0 puzzles scraped. Likely blocked HTML even via proxy.")
 
 if __name__ == "__main__":
     main()

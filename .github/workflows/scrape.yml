@@ -2,6 +2,11 @@ name: Update puzzles.json (manual)
 
 on:
   workflow_dispatch:
+    inputs:
+      games:
+        description: 'Comma-separated game slugs or all'
+        required: false
+        default: 'all'
 
 permissions:
   contents: write
@@ -32,7 +37,11 @@ jobs:
 
       - name: Run scraper
         run: |
-          python scrape_blogspot.py
+          if [ "${{ github.event.inputs.games }}" = "all" ] || [ -z "${{ github.event.inputs.games }}" ]; then
+            python scrape_blogspot.py --all
+          else
+            python scrape_blogspot.py $(echo "${{ github.event.inputs.games }}" | tr ',' ' ')
+          fi
           echo "==== puzzles.json head ===="
           head -n 30 puzzles.json || true
           echo "==== puzzles.json count line ===="
@@ -47,10 +56,10 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add puzzles.json
+          git add puzzles.json data/*.json
           git diff --cached --quiet && echo "No changes to commit" && exit 0
 
-          git commit -m "Update puzzles.json"
+          git commit -m "Update puzzle data"
 
           # Sync with remote to avoid non-fast-forward push rejection
           git fetch origin "$BRANCH"

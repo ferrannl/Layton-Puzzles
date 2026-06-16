@@ -163,7 +163,7 @@ async function main() {
   // ✅ CRITICAL BUGFIX: This ensures the app looks at your data folder, matching the dynamic layout attributes
   const BASE = new URL(".", window.location.href).href;
   const jsonPath = document.body.getAttribute("data-json-file") || "data/curious-village.json";
-  const impPath = document.body.getAttribute("data-impossible-file") || "data/impossible.json";
+  const impPath = document.body.getAttribute("data-impossible-file") || "data/curious-village-impossible.json";
 
   const solvedMap = loadSolved();
   const memoMap = memoLoadAll(MEMO_KEY);

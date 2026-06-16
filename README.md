@@ -115,14 +115,10 @@ Known broken / unsolvable puzzles are flagged in the UI:
 ├── index.html        # Main UI
 ├── style.css         # Layton-style theme
 ├── script.js         # Rendering, search, hint logic, pagination, random jump
-├── scrape.py         # Puzzle scraper (Blogspot → JSON)
+├── scrape_blogspot.py # Puzzle scraper (Blogspot → JSON)
 ├── puzzles.json      # Generated puzzle data
 ├── impossible.json   # Map of broken / infeasible puzzles
-├── logo.gif          # Project logo
-└── README.md
-````
-
----
+├── data/             # Per-game puzzle data files
 
 ## 🧠 Scraping Logic (Important)
 
@@ -152,7 +148,7 @@ The goal is **accuracy over completeness**.
 ## ▶️ How to run the scraper
 
 ```bash
-python scrape.py
+python scrape_blogspot.py --all
 ```
 
 This generates or updates:
@@ -186,6 +182,14 @@ index.html
 This project is designed to work perfectly as a **static GitHub Pages site**.
 
 Once pushed, it’s live immediately.
+
+### GitHub Actions
+
+You can also run the scraper from the repository workflow:
+
+- `.github/workflows/scrape.yml`
+- trigger it manually with `workflow_dispatch`
+- pass `games=all` or a comma-separated list like `diabolical-box,last-specter`
 
 ---
 

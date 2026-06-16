@@ -34,6 +34,11 @@
   --titleStroke: rgba(0,0,0,.95);
 }
 
+/* ---------- DARK THEME DEFAULT ---------- */
+html[data-theme="dark"], :root{
+  --infeasible:#BD4C04;
+}
+
 /* ---------- LIGHT THEME OVERRIDES ---------- */
 html[data-theme="light"]{
   /* Light backgrounds */
@@ -47,6 +52,9 @@ html[data-theme="light"]{
   /* Text colors */
   --text:#0d0b07;
   --muted:rgba(0,0,0,.62);
+
+  /* Infeasible pill (light theme variant) */
+  --infeasible:#f2a243;
 
   /* Title: black text with white outline */
   --titleFill:#000000;
@@ -250,6 +258,15 @@ html[data-theme="light"] .puzzle{
      1px -1px 0 rgba(0,0,0,.95),
     -1px  1px 0 rgba(0,0,0,.95),
      1px  1px 0 rgba(0,0,0,.95);
+}
+
+html[data-theme="dark"] .impossible{
+  background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(0,0,0,.10)), #BD4C04;
+}
+
+html[data-theme="light"] .impossible{
+  background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(0,0,0,.10)), #f2a243;
+  border-color: rgba(0,0,0,.12);
 }
 
 /* Fancy solved toggle (unchanged) */
