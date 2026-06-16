@@ -18,17 +18,15 @@ concurrency:
 jobs:
   scrape:
     runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0   # important for rebase
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 
@@ -39,12 +37,19 @@ jobs:
 
       - name: Run scraper
         run: |
-          echo "Running full scrape for all games"
-          python scrape_blogspot.py --all
+          echo "Python version:"
+          python3 --version
+          echo "Checking scraper script:"
+          ls -la scrape_blogspot.py
+          echo ""
+          echo "Running full scrape for all games..."
+          python3 scrape_blogspot.py --all
+          echo ""
           echo "==== puzzles.json head ===="
-          head -n 30 puzzles.json || true
-          echo "==== puzzles.json count line ===="
-          python -c "import json; d=json.load(open('puzzles.json','r',encoding='utf-8')); print('count:', d.get('count'))"
+          head -n 30 puzzles.json || echo "puzzles.json not found"
+          echo ""
+          echo "==== Checking data/ files ===="
+          ls -lh data/*.json || echo "No JSON files in data/"
 
       - name: Commit + push if changed
         env:
