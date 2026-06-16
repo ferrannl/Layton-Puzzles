@@ -39,16 +39,8 @@ jobs:
 
       - name: Run scraper
         run: |
-          GAMES="${{ github.event.inputs.games }}"
-          echo "Input games: '$GAMES'"
-          if [ -z "$GAMES" ] || [ "$GAMES" = "all" ]; then
-            echo "Running full scrape for all games"
-            python scrape_blogspot.py --all
-          else
-            echo "Running scrape for selected game slugs: $GAMES"
-            # convert comma-separated list into separate args
-            python scrape_blogspot.py $(echo "$GAMES" | tr ',' ' ')
-          fi
+          echo "Running full scrape for all games"
+          python scrape_blogspot.py --all
           echo "==== puzzles.json head ===="
           head -n 30 puzzles.json || true
           echo "==== puzzles.json count line ===="
