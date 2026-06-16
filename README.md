@@ -114,11 +114,12 @@ Known broken / unsolvable puzzles are flagged in the UI:
 /
 ├── index.html        # Main UI
 ├── style.css         # Layton-style theme
-├── script.js         # Rendering, search, hint logic, pagination, random jump
 ├── scrape_blogspot.py # Puzzle scraper (Blogspot → JSON)
 ├── puzzles.json      # Generated puzzle data
 ├── impossible.json   # Map of broken / infeasible puzzles
 ├── data/             # Per-game puzzle data files
+├── javascript/
+│   └── script.js     # Rendering, search, hint logic, pagination, random jump
 
 ## 🧠 Scraping Logic (Important)
 

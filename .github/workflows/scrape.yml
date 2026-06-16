@@ -18,6 +18,8 @@ concurrency:
 jobs:
   scrape:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout
@@ -37,10 +39,15 @@ jobs:
 
       - name: Run scraper
         run: |
-          if [ "${{ github.event.inputs.games }}" = "all" ] || [ -z "${{ github.event.inputs.games }}" ]; then
+          GAMES="${{ github.event.inputs.games }}"
+          echo "Input games: '$GAMES'"
+          if [ -z "$GAMES" ] || [ "$GAMES" = "all" ]; then
+            echo "Running full scrape for all games"
             python scrape_blogspot.py --all
           else
-            python scrape_blogspot.py $(echo "${{ github.event.inputs.games }}" | tr ',' ' ')
+            echo "Running scrape for selected game slugs: $GAMES"
+            # convert comma-separated list into separate args
+            python scrape_blogspot.py $(echo "$GAMES" | tr ',' ' ')
           fi
           echo "==== puzzles.json head ===="
           head -n 30 puzzles.json || true
