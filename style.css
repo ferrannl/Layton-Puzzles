@@ -249,15 +249,15 @@ html[data-theme="light"] .puzzle{
   padding:4px 10px;
   border-radius:999px;
   background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(0,0,0,.10)), var(--infeasible);
-  color:#fff;
+  color: var(--titleFill);
   font-weight:900;
   font-size:12px;
   border:1px solid rgba(255,255,255,.18);
   text-shadow:
-    -1px -1px 0 rgba(0,0,0,.95),
-     1px -1px 0 rgba(0,0,0,.95),
-    -1px  1px 0 rgba(0,0,0,.95),
-     1px  1px 0 rgba(0,0,0,.95);
+    -1px -1px 0 var(--titleStroke),
+     1px -1px 0 var(--titleStroke),
+    -1px  1px 0 var(--titleStroke),
+     1px  1px 0 var(--titleStroke);
 }
 
 html[data-theme="dark"] .impossible{
@@ -506,7 +506,6 @@ img.pimg{
   display:flex;
   align-items:center;
   gap:10px;
-  color:#fff;
   font-weight:900;
   text-shadow:
     -1px -1px 0 rgba(0,0,0,.95),
